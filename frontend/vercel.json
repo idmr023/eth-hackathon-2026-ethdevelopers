@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://eth-hackathon-2026-ethdevelopers.onrender.com/api/:path*"
+    }
+  ]
+}
