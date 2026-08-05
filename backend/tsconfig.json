@@ -19,6 +19,8 @@
     "strict": true,
     "noImplicitAny": true,
     "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true
-  }
+    "noFallthroughCasesInSwitch": true,
+    "rootDir": "src"
+  },
+  "exclude": ["node_modules", "dist", "test", "prisma"]
 }

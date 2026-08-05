@@ -56,3 +56,4 @@ Registro cronológico de trabajo por fases. Formato: `[fase.x] descripción`.
 - [fase.6] Neon conectado vía CLI (`neon init --agent`): proyecto **hackathon_eth**, org `org-silent-flower-89199288`, contexto en `backend/.neon`. `neon env pull` escribió `DATABASE_URL` (pooled) y `DATABASE_URL_UNPOOLED` (directa) en `backend/.env`.
 - [fase.6] `schema.prisma` añade `directUrl = env("DATABASE_URL_UNPOOLED")`: migraciones van por conexión directa, la app por pooled.
 - [fase.6] Migraciones aplicadas y seed ejecutado contra Neon (admin `admin@invoiceshield.dev`, analistas `analista@continental.pe` / `analista@peru.pe`, facturas demo).
+- [fase.6] Fix build de producción: `tsconfig.json` ganaba `rootDir: "src"` (emitía `dist/src/main.js` y rompía `node dist/main.js` en Render). Ahora `nest build` emite `dist/main.js`; `test/` y `prisma/` excluidos de `tsc` (e2e siguen vía ts-jest).
