@@ -46,3 +46,10 @@ Registro cronológico de trabajo por fases. Formato: `[fase.x] descripción`.
 ## [fase.5] — Documentación final (pendiente)
 
 - [fase.5] README raíz, README por carpeta, `docs/` final.
+
+## [fase.6] — Despliegue (en preparación)
+
+- [fase.6] Arquitectura elegida: **frontend → Vercel** (proyecto Next.js standalone) y **backend → Render** (Web Service NestJS, `node dist/main.js`); DB permanece en Neon.
+- [fase.6] Cookies de sesión cross-origin: `sameSite` pasa a `'none'` en producción (`secure: true`, HTTPS) en `auth.controller.ts`; en local `'lax'`. Requerido porque frontend y API viven en dominios distintos.
+- [fase.6] Deploy backend (Render): Root `backend/`, Build `npm ci && npx prisma generate && npm run build`, Start `npx prisma migrate deploy && node dist/main.js`, env `DATABASE_URL`, `JWT_*_SECRET`, `NODE_ENV=production`, `ALLOWED_ORIGINS=https://<front>.vercel.app`.
+- [fase.6] Deploy frontend (Vercel): Root `frontend/`, Framework Next.js, env `NEXT_PUBLIC_API_URL=https://<backend>.onrender.com`. Sin `vercel.json` (no se usa Services).

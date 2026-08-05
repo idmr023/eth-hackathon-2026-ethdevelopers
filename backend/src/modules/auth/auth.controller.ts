@@ -92,18 +92,21 @@ export class AuthController {
   }
 
   private setAuthCookies(res: Response, result: LoginResult): void {
-    const secure = this.configService.get<string>('NODE_ENV') === 'production';
+    const production =
+      this.configService.get<string>('NODE_ENV') === 'production';
+    // Cross-origin (frontend Vercel → API Render) requiere sameSite 'none'
+    // (con Secure). En local, 'lax' mantiene el flujo de cookies HTTP.
     res.cookie(ACCESS_COOKIE, result.accessToken, {
       httpOnly: true,
-      sameSite: 'strict',
-      secure,
+      sameSite: production ? 'none' : 'lax',
+      secure: production,
       path: '/',
       maxAge: 15 * 60 * 1000,
     });
     res.cookie(REFRESH_COOKIE, result.refreshToken, {
       httpOnly: true,
-      sameSite: 'strict',
-      secure,
+      sameSite: production ? 'none' : 'lax',
+      secure: production,
       path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
