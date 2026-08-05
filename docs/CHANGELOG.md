@@ -53,3 +53,6 @@ Registro cronológico de trabajo por fases. Formato: `[fase.x] descripción`.
 - [fase.6] Cookies de sesión cross-origin: `sameSite` pasa a `'none'` en producción (`secure: true`, HTTPS) en `auth.controller.ts`; en local `'lax'`. Requerido porque frontend y API viven en dominios distintos.
 - [fase.6] Deploy backend (Render): Root `backend/`, Build `npm ci && npx prisma generate && npm run build`, Start `npx prisma migrate deploy && node dist/main.js`, env `DATABASE_URL`, `JWT_*_SECRET`, `NODE_ENV=production`, `ALLOWED_ORIGINS=https://<front>.vercel.app`.
 - [fase.6] Deploy frontend (Vercel): Root `frontend/`, Framework Next.js, env `NEXT_PUBLIC_API_URL=https://<backend>.onrender.com`. Sin `vercel.json` (no se usa Services).
+- [fase.6] Neon conectado vía CLI (`neon init --agent`): proyecto **hackathon_eth**, org `org-silent-flower-89199288`, contexto en `backend/.neon`. `neon env pull` escribió `DATABASE_URL` (pooled) y `DATABASE_URL_UNPOOLED` (directa) en `backend/.env`.
+- [fase.6] `schema.prisma` añade `directUrl = env("DATABASE_URL_UNPOOLED")`: migraciones van por conexión directa, la app por pooled.
+- [fase.6] Migraciones aplicadas y seed ejecutado contra Neon (admin `admin@invoiceshield.dev`, analistas `analista@continental.pe` / `analista@peru.pe`, facturas demo).
