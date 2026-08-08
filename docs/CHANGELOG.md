@@ -94,6 +94,17 @@ Registro cronológico de trabajo por fases. Formato: `[fase.x] descripción`.
 - [fase.6.entorno] Fix `RangeError: Invalid currency code: USDC`: `Intl.NumberFormat` solo acepta divisas ISO 4217; `formatMoney` recibía símbolos de token (`USDC`/`USDT`/`DAI`) → crash. Ahora `TOKEN_TO_ISO` mapea tokens a `USD` y un `try/catch` cae a formato numérico para códigos inválidos (`lib/format.ts`). Tests añadidos (23 en total).
 - [fase.6.entorno] Menú lateral: añadido `/auctions` ("Licitaciones") con permiso `AUCTIONS_VIEW` — las rutas existían (`/auctions`, `/auctions/new`, `/auctions/[id]`) pero no eran accesibles desde el nav (`app-shell.tsx`).
 
+## [fase.6.contracts] — Despliegue BlindBidVault en Arbitrum Sepolia (completado)
+
+- [fase.6.contracts] Workspace `contracts/` (Foundry): `foundry.toml` (solc 0.8.24, optimizer 200 runs), `remappings.txt`, `src/BlindBidVault.sol` (movido desde `frontend/lib/web3/contracts/`, fuente única del contrato), `script/DeployBlindBidVault.s.sol`, `deploy.sh` (dry-run/`--broadcast`), `.env.example` (gitignore del `.env`).
+- [fase.6.contracts] Deps: `forge-std` v1.9.4 y `openzeppelin-contracts` v5.3.0 como submódulos de git en `contracts/lib/`.
+- [fase.6.contracts] Constructor del vault: token USDC Circle `0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d`, `priceWeight=70`, `qualityWeight=30` (el backend lee ambos pesos on-chain).
+- [fase.6.contracts] Desplegado en **Arbitrum Sepolia (421614)**: `BlindBidVault` en **`0x80d5408c6a0496e7318b94613d11128ba9d844ff`** (tx `0xd12a9525...4630c7`). Deployer `0x06F53057F6428a3D666d6033D7Ac8E5D713bAA35` = signer del backend.
+- [fase.6.contracts] Roles on-chain verificados: deployer con `DEFAULT_ADMIN_ROLE` (constructor) y `AUDITOR_ROLE` (tx `grantRole` `0xcb02a456...0762d6`) para que el backend pueda llamar `setAuditScore`.
+- [fase.6.contracts] Verificación on-chain: código presente, `priceWeight=70`, `qualityWeight=30`, `token=0x75faf1...`, `hasRole(AUDITOR_ROLE, deployer)=true`.
+- [fase.6.contracts] Dirección propagada: `backend/.env` (`BLIND_BID_VAULT_ADDRESS`), `frontend/.env.local` (`NEXT_PUBLIC_BLIND_BID_VAULT_ADDRESS_SEPOLIA`) y fallback en `frontend/lib/web3/contracts/addresses.ts`.
+- [fase.6.contracts] Fix CORS en `backend/.env.example`: `ALLOWED_ORIGINS` era `"http://...","https://..."` (comillas por valor que rompían `allowedOrigins()` de `config.ts`); ahora es un único string separado por comas.
+
 
 
 

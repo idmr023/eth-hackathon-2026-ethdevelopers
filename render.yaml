@@ -1,0 +1,43 @@
+# Render Blueprint — InvoiceShield Backend (NestJS + Prisma + Neon)
+# Despliegue: Render > New > Blueprint > seleccionar este repo (apunta a este render.yaml).
+# Las variables con `sync: false` se setean manualmente en el dashboard de Render.
+services:
+  - type: web
+    name: invoiceshield-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci && npx prisma generate && npm run build && npx prisma migrate deploy && npx prisma db seed
+    startCommand: node dist/main
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_URL_UNPOOLED
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: "http://localhost:3000,https://eth-hackathon-2026-ethdevelopers.vercel.app"
+      - key: ARBITRUM_RPC_URL
+        sync: false
+      - key: ARBITRUM_PRIVATE_KEY
+        sync: false
+      - key: ARBITRUM_CHAIN_ID
+        value: "421614"
+      - key: ARBITRUM_TOKEN_DECIMALS
+        value: "6"
+      - key: BLIND_BID_VAULT_ADDRESS
+        value: "0x80d5408c6a0496e7318b94613d11128ba9d844ff"
+      - key: AGENT_ENCRYPTION_KEY
+        sync: false
+      - key: SEED_ADMIN_EMAIL
+        value: admin@invoiceshield.dev
+      - key: SEED_ADMIN_PASSWORD
+        sync: false
