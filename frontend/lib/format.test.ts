@@ -11,6 +11,17 @@ describe("formatMoney", () => {
     expect(formatMoney(12500, "USD")).toMatch(/12[.,]500/);
   });
 
+  it("mapea tokens a divisa ISO sin lanzar RangeError", () => {
+    expect(() => formatMoney(12500, "USDC")).not.toThrow();
+    expect(formatMoney(12500, "USDC")).toContain("USD");
+    expect(formatMoney(12500, "USDT")).toContain("USD");
+  });
+
+  it("cae a formato numérico para códigos inválidos", () => {
+    expect(() => formatMoney(12500, "NOTACURRENCY")).not.toThrow();
+    expect(formatMoney(12500, "NOTACURRENCY")).toMatch(/12[.,]500/);
+  });
+
   it("devuelve 0 para valores no numéricos", () => {
     expect(formatMoney("abc")).toMatch(/0/);
   });

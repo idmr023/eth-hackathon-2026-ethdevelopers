@@ -22,7 +22,7 @@ export function LoginForm() {
     setLoading(true);
     try {
       await login(email, password);
-      router.replace("/dashboard");
+      router.replace("/auctions");
     } catch (cause) {
       const message =
         cause instanceof ApiError
@@ -42,7 +42,7 @@ export function LoginForm() {
       <div>
         <h2 className="text-lg font-semibold text-foreground">Acceso al protocolo</h2>
         <p className="mt-1 text-sm text-muted">
-          Ingresa con tus credenciales de InvoiceShield.
+          Ingresa con tus credenciales de LICITABIEN.
         </p>
       </div>
 

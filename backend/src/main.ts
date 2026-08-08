@@ -59,6 +59,7 @@ async function bootstrap(): Promise<void> {
       limit: 300,
       standardHeaders: true,
       legacyHeaders: false,
+      skip: (req) => req.path.startsWith('/api/blockchain/'),
     }),
   );
 

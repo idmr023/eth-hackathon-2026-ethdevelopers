@@ -44,3 +44,8 @@ Thumbs.db
 
 # Prisma
 prisma/*.db
+
+# Junk / local tooling
+*Zone.Identifier
+.opencode/
+backend/check_tables.*

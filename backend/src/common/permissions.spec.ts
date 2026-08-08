@@ -4,17 +4,20 @@ import { Permissions, RolePermissions } from './permissions';
 describe('RBAC permissions', () => {
   it('ADMIN posee todos los permisos del catálogo (super-gate)', () => {
     const all = Object.values(Permissions);
-    expect(all).toHaveLength(7);
+    expect(all).toHaveLength(11);
     for (const permission of all) {
       expect(RolePermissions[UserRole.ADMIN]).toContain(permission);
     }
   });
 
-  it('ANALYST solo puede ver/registrar facturas y firmar vía adaptadores', () => {
+  it('ANALYST puede ver/registrar facturas, firmar adaptadores y participar en subastas', () => {
     expect(RolePermissions[UserRole.ANALYST]).toEqual([
       Permissions.INVOICES_VIEW,
       Permissions.INVOICES_REGISTER,
       Permissions.ADAPTERS_SIGN,
+      Permissions.AUCTIONS_VIEW,
+      Permissions.AUCTIONS_COMMIT,
+      Permissions.AUCTIONS_REVEAL,
     ]);
   });
 
@@ -27,6 +30,9 @@ describe('RBAC permissions', () => {
     );
     expect(RolePermissions[UserRole.ANALYST]).not.toContain(
       Permissions.AUDIT_VIEW,
+    );
+    expect(RolePermissions[UserRole.ANALYST]).not.toContain(
+      Permissions.AUCTIONS_MANAGE,
     );
   });
 

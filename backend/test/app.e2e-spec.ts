@@ -6,7 +6,6 @@ import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/shared/prisma.service';
 
 // Los bodies de supertest son `any`.
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 
 describe('InvoiceShield (e2e)', () => {
   let app: INestApplication;

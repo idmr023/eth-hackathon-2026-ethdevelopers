@@ -13,6 +13,7 @@ import { AuditService } from '../../shared/audit.service';
 import { ErrorCodes } from '../../common/errors';
 import type { AuthUser } from '../../common/decorators/current-user.decorator';
 import { computeInvoiceHash } from '../../shared/invoice-hash';
+import { ConfigService } from '@nestjs/config';
 
 const adminActor: AuthUser = {
   id: 'user-1',
@@ -45,6 +46,10 @@ const pendingInvoice = {
   updatedAt: new Date(),
 };
 
+const mockConfigService = {
+  get: () => '0000000000000000000000000000000000000000000000000000000000000000',
+} as unknown as ConfigService;
+
 describe('InvoicesService', () => {
   let service: InvoicesService;
   const repository = {
@@ -61,7 +66,7 @@ describe('InvoicesService', () => {
     list: jest.fn(),
   };
   const audit = { record: jest.fn() };
-  const crypto = new CryptoService();
+  const crypto = new CryptoService(mockConfigService);
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({

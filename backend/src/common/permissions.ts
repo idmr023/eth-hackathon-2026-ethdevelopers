@@ -9,6 +9,10 @@ export const Permissions = {
   AUDIT_VIEW: 'audit.view',
   FACTORS_MANAGE: 'factors.manage',
   USERS_MANAGE: 'users.manage',
+  AUCTIONS_VIEW: 'auctions.view',
+  AUCTIONS_MANAGE: 'auctions.manage',
+  AUCTIONS_COMMIT: 'auctions.commit',
+  AUCTIONS_REVEAL: 'auctions.reveal',
 } as const;
 
 export type Permission = (typeof Permissions)[keyof typeof Permissions];
@@ -19,5 +23,8 @@ export const RolePermissions: Record<UserRole, readonly Permission[]> = {
     Permissions.INVOICES_VIEW,
     Permissions.INVOICES_REGISTER,
     Permissions.ADAPTERS_SIGN,
+    Permissions.AUCTIONS_VIEW,
+    Permissions.AUCTIONS_COMMIT,
+    Permissions.AUCTIONS_REVEAL,
   ],
 };

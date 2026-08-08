@@ -43,9 +43,25 @@ Registro cronológico de trabajo por fases. Formato: `[fase.x] descripción`.
 - [fase.4] Hook `useAsyncResource` (patrón cancel-safe, sin `setState` síncrono en efectos — regla `react-hooks/set-state-in-effect` de React 19).
 - [fase.4] Calidad: 21 tests vitest (format, permissions, api), lint sin errores, `tsc --noEmit` limpio, `next build` OK con todas las rutas.
 
-## [fase.5] — Documentación final (pendiente)
+## [fase.4.blindbid] — Frontend: subastas BlindBid (completado)
 
-- [fase.5] README raíz, README por carpeta, `docs/` final.
+- [fase.4.blindbid] Tipos de subasta en `lib/types.ts`: `Auction`, `AuctionResponse`, `OnChainCommitment`, `Delegation`, `AuditVerdict`, enums `AuctionStatus`/`DelegationStatus`.
+- [fase.4.blindbid] `lib/endpoints.ts`: `auctionsApi` tipado (list, detail, bidders, commitment, create, delegateReveal, setAuditScore).
+- [fase.4.blindbid] Lista de licitaciones `/auctions` con paginación desde el backend sincronizado on-chain; `export default` de página corregido.
+- [fase.4.blindbid] Alta de licitación `/auctions/new` (valida ventanas commit/reveal; hook de permisos movido tras los hooks de React — regla `react-hooks/rules-of-hooks`).
+- [fase.4.blindbid] Detalle de licitación `/auctions/[id]`: commit-reveal nativo (commitment `keccak256(encodePacked(uint256,string))` vía viem), reveal, delegación de revelación al agente, reembolso de stake y liquidación por el organizador; panel de ofertantes y estado on-chain del postor.
+- [fase.4.blindbid] Web3: `useBlindBidVault.ts` (hooks read/write con casts `0x${string}`, eliminado hook de evento inválido), `addresses.ts` tipado, `Web3Provider.tsx` sin dependencia `next-themes` y sin prop `chains` (RainbowKit 2.x), `WalletButton.tsx` con props válidas de `ConnectButton`.
+- [fase.4.blindbid] Calidad: `tsconfig.json` target ES2020 (BigInt), lint sin errores, `tsc --noEmit` limpio, 21 tests vitest en verde, `next build` OK.
+
+## [fase.5] — Documentación final (completado)
+
+- [fase.5] `README.md` raíz reescrito: visión, arquitectura, flujo de coordinación, quickstart, comandos de calidad, seguridad, tabla de fases e índice de documentación.
+- [fase.5] `backend/README.md` reescrito: stack, estructura por dominios, tabla de API `/api`, variables de entorno, comandos, seguridad y cobertura de tests.
+- [fase.5] `frontend/README.md` reescrito: stack, estructura, rutas, capa web3/BlindBidVault (fórmula del commitment), env y comandos.
+- [fase.5] `docs/README.md` (índice de documentación) y `docs/ARCHITECTURE.md` (flujos mermaid, mecánica commit–reveal, invariantes, modelo de datos, seguridad y despliegue).
+- [fase.5] CI: habilitado el job `frontend` (lint, typecheck, tests, build) en `.github/workflows/ci.yml` — ya no está comentado tras fase.4.
+- [fase.5] Limpieza: `frontend/.env.example` sin la línea huérfana `ALLOWED_ORIGINS` (variable del backend) y con vars web3 documentadas.
+- [fase.5] Limpieza: eliminado `backend/check_tables.ts` (script de depuración de Neon en la raíz que rompía `nest build` por `rootDir: src`).
 
 ## [fase.6] — Despliegue (en preparación)
 
@@ -58,3 +74,26 @@ Registro cronológico de trabajo por fases. Formato: `[fase.x] descripción`.
 - [fase.6] `schema.prisma` añade `directUrl = env("DATABASE_URL_UNPOOLED")`: migraciones van por conexión directa, la app por pooled.
 - [fase.6] Migraciones aplicadas y seed ejecutado contra Neon (admin `admin@invoiceshield.dev`, analistas `analista@continental.pe` / `analista@peru.pe`, facturas demo).
 - [fase.6] Fix build de producción: `tsconfig.json` ganaba `rootDir: "src"` (emitía `dist/src/main.js` y rompía `node dist/main.js` en Render). Ahora `nest build` emite `dist/main.js`; `test/` y `prisma/` excluidos de `tsc` (e2e siguen vía ts-jest).
+
+## [fase.6.entorno] — Entorno local: `.env` reales y fixes de arranque (completado)
+
+- [fase.6.entorno] `backend/.env` completo: `ARBITRUM_RPC_URL`, `ARBITRUM_PRIVATE_KEY` (signer keystone `0x06F5...bAA35`), `ARBITRUM_CHAIN_ID=421614`, `ARBITRUM_TOKEN_DECIMALS=6`, `BLIND_BID_VAULT_ADDRESS` (desplegado con código en Sepolia), `AGENT_ENCRYPTION_KEY` (64 hex generada) y `ALLOWED_ORIGINS` con la URL de Vercel.
+- [fase.6.entorno] `frontend/.env.local` creado: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC_URL`, `NEXT_PUBLIC_ALCHEMY_API_KEY`, `NEXT_PUBLIC_BLIND_BID_VAULT_ADDRESS_SEPOLIA`.
+- [fase.6.entorno] Fix DI: `BiddingModule` no importaba `BlockchainModule` → `BiddingService` no resolvía `ArbitrumService` y el bootstrap fallaba. Añadido `imports: [BlockchainModule]`.
+- [fase.6.entorno] Fix DTOs `create-auction.dto.ts`: `@Min/@Max` de class-validator solo validan números, así que sobre strings (`title`, `description`, `secret`, `proposalUri`) rechazaban cualquier input. Sustituidos por `@Length(1, N)`. `aiScore` pasa de `@IsNumberString()` (string) a `@IsInt() @Min(0) @Max(100)` (coherente con `Int` en Prisma). `commitEnd/revealEnd` tipados `string` (se consumen con `BigInt()`).
+- [fase.6.entorno] Fix firma on-chain: `ArbitrumService.send()` pasaba la dirección (string) como `account`, así que viem enviaba `eth_sendTransaction` (firma del nodo) y Alchemy respondía `Unsupported method`. Ahora se conserva el objeto signer (`privateKeyToAccount`) en `assertReady()` y `send()` firma localmente con `eth_sendRawTransaction`.
+- [fase.6.entorno] Fix serialización: `syncAuction` guardaba `winningPrice: 0n` y `winner: 0x000...0` (dirección zero) sin ganador → `GET /api/auctions` crasheaba con `Do not know how to serialize a BigInt`. Ahora se normaliza a `null` y `serializeAuction` convierte `winningPrice`/`createdBlock` a string defensivamente.
+- [fase.6.entorno] Verificación E2E on-chain: login admin, `POST /api/auctions` con tx confirmada (`0xb3d5d924...`, auctionId 1, token USDC `0x75faf1...`), `GET /api/auctions` y `GET /api/auctions/1` en verde.
+- [fase.6.entorno] Calidad: lint limpio, `tsc --noEmit` sin errores, `nest build` OK, 39/39 tests en verde.
+- [fase.6.entorno] Nota de seguridad: `ARBITRUM_PRIVATE_KEY` quedó expuesta en el canal de chat; rotar antes de ir a producción.
+- [fase.6.entorno] Fix deps frontend: `wagmi` baja de `^3.7.6` a `^2.19.5` — `@rainbow-me/rainbowkit@2.2.11` (última versión) exige `wagmi@^2.9.0` y `npm ci` limpio fallaba con ERESOLVE. El código web3 solo usa APIs compatibles con v2 (`createConfig` + `transports`), así que typecheck/build no cambian.
+- [fase.6.entorno] Fix build Turbopack: `@coinbase/cdp-sdk@1.55.0` (transitivo de `@wagmi/connectors`) hace `import()` dinámicos de `@x402/*` declarados como peers **opcionales**, que npm no instala → `next build` fallaba con `Module not found: Can't resolve '@x402/core/client'`. Se instalaron explícitamente `@x402/core`, `@x402/evm`, `@x402/extensions`, `@x402/svm` (v2.21.0). Ahora `npm ci` reproducible, build OK.
+- [fase.6.entorno] Smoke final: `next start` sirve `/`, `/login`, `/auctions` (200) con backend en `http://localhost:4000` (health `database: up`).
+- [fase.6.entorno] Script dev único: `dev.sh` en raíz (sin deps extra, bash puro con `trap` + `wait`) que levanta frontend (`next dev`) y backend (`nest start --watch --no-shell`) en paralelo y limpia ambos al hacer Ctrl+C. `package.json` raíz: `dev` → `./dev.sh`, `dev:frontend`/`dev:backend` con `--prefix`.
+- [fase.6.entorno] Fix `nest start` en rutas con `&`: el directorio `ethackhaton-frontend&backend` contiene un `&` que rompía el spawn por shell de Nest (`/bin/sh: backend/backend/dist/main: not found`, `Cannot find module '...ethackhaton-frontend'`). `nest start` tiene `--shell` activo por defecto; se añadió `--no-shell` a `start:dev` para spawn directo de node (a prueba de `&`).
+- [fase.6.entorno] Fix `RangeError: Invalid currency code: USDC`: `Intl.NumberFormat` solo acepta divisas ISO 4217; `formatMoney` recibía símbolos de token (`USDC`/`USDT`/`DAI`) → crash. Ahora `TOKEN_TO_ISO` mapea tokens a `USD` y un `try/catch` cae a formato numérico para códigos inválidos (`lib/format.ts`). Tests añadidos (23 en total).
+- [fase.6.entorno] Menú lateral: añadido `/auctions` ("Licitaciones") con permiso `AUCTIONS_VIEW` — las rutas existían (`/auctions`, `/auctions/new`, `/auctions/[id]`) pero no eran accesibles desde el nav (`app-shell.tsx`).
+
+
+
+

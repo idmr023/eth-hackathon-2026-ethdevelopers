@@ -18,13 +18,8 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", permission: Permissions.INVOICES_VIEW },
-  { href: "/invoices", label: "Facturas", permission: Permissions.INVOICES_VIEW },
-  { href: "/fraud-alerts", label: "Alertas de fraude", permission: Permissions.INVOICES_VIEW },
-  { href: "/adapters", label: "Adaptadores", permission: Permissions.INVOICES_VIEW },
-  { href: "/audit", label: "Auditoría", permission: Permissions.AUDIT_VIEW },
+  { href: "/auctions", label: "Licitaciones", permission: Permissions.AUCTIONS_VIEW },
   { href: "/admin/users", label: "Usuarios", permission: Permissions.USERS_MANAGE },
-  { href: "/admin/factors", label: "Factores", permission: Permissions.FACTORS_MANAGE },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -73,7 +68,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-2 px-5 py-5">
           <span className="size-2.5 rounded-full bg-primary shadow-[var(--shadow-glow)]" />
           <span className="font-mono text-sm font-bold tracking-widest text-foreground">
-            INVOICE<span className="text-primary">SHIELD</span>
+            LICITA<span className="text-primary">BIEN</span>
           </span>
         </div>
         <nav className="flex-1 space-y-1 px-3">

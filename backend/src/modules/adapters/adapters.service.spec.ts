@@ -4,12 +4,17 @@ import { AdaptersService } from './adapters.service';
 import { InvoicesService } from '../invoices/invoices.service';
 import { ResilienceService } from '../../shared/resilience.service';
 import { CryptoService } from '../../shared/crypto.service';
+import { ConfigService } from '@nestjs/config';
 import type { AuthUser } from '../../common/decorators/current-user.decorator';
 
 describe('AdaptersService', () => {
   let service: AdaptersService;
   const resilience = new ResilienceService();
-  const crypto = new CryptoService();
+  const configService = {
+    get: () =>
+      '0000000000000000000000000000000000000000000000000000000000000000',
+  } as unknown as ConfigService;
+  const crypto = new CryptoService(configService);
   const invoicesService = {
     recordAdapterValidation: jest.fn(),
     detail: jest.fn(),

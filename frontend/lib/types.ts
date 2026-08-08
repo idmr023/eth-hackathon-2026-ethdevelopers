@@ -170,3 +170,84 @@ export interface PageResult<T> {
   data: T[];
   total: number;
 }
+
+// ─── Blockchain: Auctions (BlindBidVault) ────────────────────────────
+export const AuctionStatus = {
+  ACTIVE: "ACTIVE",
+  SETTLED: "SETTLED",
+  CANCELLED: "CANCELLED",
+} as const;
+export type AuctionStatus = (typeof AuctionStatus)[keyof typeof AuctionStatus];
+
+export const DelegationStatus = {
+  PENDING: "PENDING",
+  REVEALED: "REVEALED",
+  FAILED: "FAILED",
+} as const;
+export type DelegationStatus =
+  (typeof DelegationStatus)[keyof typeof DelegationStatus];
+
+export interface Auction {
+  id: string;
+  contractAddress: string;
+  auctionId: string;
+  title: string;
+  description: string | null;
+  status: AuctionStatus;
+  organizerAddress: string;
+  treasuryAddress: string;
+  tokenAddress: string;
+  stakeAmount: string;
+  minPrice: string;
+  maxPrice: string;
+  priceWeight: number;
+  qualityWeight: number;
+  commitEnd: string;
+  revealEnd: string;
+  winner: string | null;
+  winningPrice: string | null;
+  createdBlock: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuctionResponse {
+  auctionId: string;
+  txHash: string;
+  auction: Auction;
+}
+
+export interface OnChainCommitment {
+  hash: string;
+  revealed: boolean;
+  slashed: boolean;
+  refunded: boolean;
+  price: string;
+  priceFormatted: string;
+}
+
+export interface Delegation {
+  id: string;
+  auctionId: string;
+  bidderAddress: string;
+  commitmentHash: string;
+  price: string;
+  secretEncrypted: string | null;
+  proposalUri: string | null;
+  status: DelegationStatus;
+  revealTxHash: string | null;
+  error: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuditVerdict {
+  id: string;
+  auctionId: string;
+  bidderAddress: string;
+  aiScore: number;
+  docHash: string | null;
+  summaryUri: string | null;
+  modelVersion: string | null;
+  createdAt: string;
+}

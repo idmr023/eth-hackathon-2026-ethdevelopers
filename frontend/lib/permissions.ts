@@ -10,6 +10,10 @@ export const Permissions = {
   AUDIT_VIEW: "audit.view",
   FACTORS_MANAGE: "factors.manage",
   USERS_MANAGE: "users.manage",
+  AUCTIONS_VIEW: "auctions.view",
+  AUCTIONS_MANAGE: "auctions.manage",
+  AUCTIONS_COMMIT: "auctions.commit",
+  AUCTIONS_REVEAL: "auctions.reveal",
 } as const;
 
 export type Permission = (typeof Permissions)[keyof typeof Permissions];
@@ -52,4 +56,20 @@ export function canSignAdapters(user: AuthUser | null): boolean {
 
 export function canRegisterInvoices(user: AuthUser | null): boolean {
   return can(user, Permissions.INVOICES_REGISTER);
+}
+
+export function canViewAuctions(user: AuthUser | null): boolean {
+  return can(user, Permissions.AUCTIONS_VIEW);
+}
+
+export function canManageAuctions(user: AuthUser | null): boolean {
+  return can(user, Permissions.AUCTIONS_MANAGE);
+}
+
+export function canCommitAuctions(user: AuthUser | null): boolean {
+  return can(user, Permissions.AUCTIONS_COMMIT);
+}
+
+export function canRevealAuctions(user: AuthUser | null): boolean {
+  return can(user, Permissions.AUCTIONS_REVEAL);
 }

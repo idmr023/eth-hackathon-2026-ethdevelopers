@@ -1,0 +1,27 @@
+{
+  "name": "ethackhaton",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/idmr023/eth-hackathon-2026-ethdevelopers#readme",
+  "bugs": {
+    "url": "https://github.com/idmr023/eth-hackathon-2026-ethdevelopers/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/idmr023/eth-hackathon-2026-ethdevelopers.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "./dev.sh",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "npm run start:dev --prefix backend",
+    "dev:all": "npm run dev"
+  }
+}

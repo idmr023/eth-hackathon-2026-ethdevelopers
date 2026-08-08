@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
+import { StringValue } from 'ms';
 import { AppController } from './app.controller';
 import { SharedModule } from './shared/shared.module';
 import { validateEnv } from './shared/config';
@@ -14,6 +15,8 @@ import { AnomaliesModule } from './modules/anomalies/anomalies.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { HealthModule } from './modules/health/health.module';
+import { BlockchainModule } from './modules/blockchain/blockchain.module';
+import { BiddingModule } from './modules/bidding/bidding.module';
 import { AuthGuard } from './common/guards/auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
@@ -25,8 +28,16 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
     JwtModule.registerAsync({
       global: true,
-      inject: [],
-      useFactory: () => ({}),
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_ACCESS_SECRET'),
+        signOptions: {
+          expiresIn: configService.get<string>(
+            'JWT_ACCESS_TTL',
+            '15m',
+          ) as StringValue,
+        },
+      }),
     }),
     SharedModule,
     AuthModule,
@@ -38,6 +49,8 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
     DashboardModule,
     AuditModule,
     HealthModule,
+    BlockchainModule,
+    BiddingModule,
   ],
   controllers: [AppController],
   providers: [

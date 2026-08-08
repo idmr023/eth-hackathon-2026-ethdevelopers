@@ -32,6 +32,9 @@ export class AuditRepository {
       }),
       this.prisma.auditLog.count({ where }),
     ]);
-    return { rows, total };
+    // `id` es BigInt en Prisma y JSON.stringify no lo serializa (TypeError).
+    // Se expone como string para que la API y el frontend sean JSON-safe.
+    const safeRows = rows.map((row) => ({ ...row, id: row.id.toString() }));
+    return { rows: safeRows, total };
   }
 }

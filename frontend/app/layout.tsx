@@ -15,11 +15,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "InvoiceShield",
-    template: "%s · InvoiceShield",
+    default: "LICITABIEN",
+    template: "%s · LICITABIEN",
   },
   description:
-    "Protocolo criptográfico de coordinación y prevención de fraude en factoring B2B",
+    "Plataforma descentralizada de licitaciones de sobre cerrado (commit-reveal) sobre Arbitrum",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -1,98 +1,94 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# InvoiceShield · Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API de **NestJS 11 + Prisma 6 + Neon PostgreSQL** del protocolo InvoiceShield. Autoridad central de validación de negocio, RBAC, cálculo de hashes y orquestación blockchain sobre **Arbitrum Sepolia**.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## Stack
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- **NestJS 11** (TypeScript estricto, modular por dominios)
+- **Prisma 6** → **Neon PostgreSQL** (`directUrl` para migraciones, conexión pooled para la app)
+- **ethers.js/viem** para interacción con `BlindBidVault` (Arbitrum Sepolia)
+- **Swagger** (`@nestjs/swagger`) con DTOs validados por `class-validator`
 
-## Project setup
+## Estructura
 
-```bash
-$ npm install
+```
+src/
+├── main.ts                     # bootstrap, /api, helmet, CORS, rate-limit, ValidationPipe
+├── common/                     # errors.ts, permissions.ts (RBAC), guards, interceptors, filtros, DTOs
+├── shared/                     # prisma.service, audit.service, crypto.service (keccak256),
+│                               # resilience.service, config.ts (validateEnv), invoice-hash.ts
+└── modules/
+    ├── auth/                   # login, refresh, logout, change-password, me (cookies httpOnly)
+    ├── users/ · factors/       # gestión de usuarios y factores (admin)
+    ├── invoices/               # registro + huella keccak256 + validaciones SUNAT/CAVALI + fraud-alerts
+    ├── adapters/               # adaptadores simulados SUNAT y CAVALI (interfaz InvoiceAdapter)
+    ├── anomalies/              # anomalías detectadas por IA
+    ├── audit/                  # log WORM append-only
+    ├── dashboard/              # KPIs y recientes filtrados por permisos
+    ├── bidding/                # subastas BlindBid (commit-reveal) y delegación de revelación
+    └── blockchain/             # ArbitrumService (signer, lectura/escritura del vault)
 ```
 
-## Compile and run the project
+## API (prefijo `/api`)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/auth/login` · `/auth/refresh` · `/auth/logout` · `/auth/change-password` | Sesión con cookies |
+| GET | `/auth/me` | Sesión actual |
+| GET/POST | `/invoices` · `/invoices/register` · `/invoices/fraud-alerts` · `/invoices/:id` | Facturas y alertas |
+| POST | `/adapters/sunat/conformity` · `/adapters/cavali/factrack` · GET `/adapters/status` | Firmas de conformidad y estado |
+| GET/POST | `/factors` · `/users` · `/users/:id/status` | Administración |
+| POST | `/anomalies` | Registro de anomalías |
+| GET | `/audit` | Log WORM filtrable |
+| GET | `/dashboard` | KPIs condicionados por permisos |
+| POST/GET | `/auctions` · `/auctions/:id` | Crear y listar licitaciones |
+| GET | `/auctions/:id/bidders` · `/auctions/:id/commitment/:bidder` | Estado on-chain de ofertas |
+| POST | `/auctions/:id/delegate-reveal` · `/auctions/:id/audit-score` | Delegación al agente y scoring IA |
+| GET | `/health` | Health check |
+
+Formato de respuesta estándar: `{ ok: boolean, data: any, total?: number }`.
+
+## Variables de entorno (`.env`)
+
+Ver [`backend/.env.example`](.env.example). Claves principales:
+
+| Variable | Descripción |
+|---|---|
+| `DATABASE_URL` / `DATABASE_URL_UNPOOLED` | Conexión Neon (pooled / directa) |
+| `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | ≥ 32 caracteres |
+| `JWT_ACCESS_TTL` / `JWT_REFRESH_TTL` | `15m` / `7d` |
+| `ALLOWED_ORIGINS` | Orígenes CORS separados por coma |
+| `ARBITRUM_RPC_URL` · `ARBITRUM_PRIVATE_KEY` · `ARBITRUM_CHAIN_ID` | Node y signer del vault |
+| `BLIND_BID_VAULT_ADDRESS` | Dirección del contrato BlindBidVault |
+| `AGENT_ENCRYPTION_KEY` | Clave AES-256-GCM (hex 64) para cifrar reveal secrets delegados |
+| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | Credenciales del seed (solo pre-producción) |
+
+## Comandos
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm run start:dev        # desarrollo con recarga
+npm run build            # nest build → dist/main.js
+npm run typecheck        # tsc --noEmit
+npm run lint             # eslint
+npm test                 # tests unitarios (jest)
+npm run test:e2e         # tests e2e (jest --config test/jest-e2e.json)
+npx prisma migrate dev   # nueva migración
+npx prisma migrate deploy# aplicar en producción (Neon)
+npm run db:seed          # datos demo (tsx prisma/seed.ts)
 ```
 
-## Run tests
+## Seguridad
 
-```bash
-# unit tests
-$ npm run test
+- **WORM** en `audit_logs` vía triggers y `REVOKE` (append-only).
+- **Cookies httpOnly** con refresh rotatorio single-use y lockout tras 5 intentos.
+- **Rate limiting** (login 20/15min, refresh 60/15min, global 300/min).
+- **RBAC**: 7 permisos y guards con super-gate para admins.
+- **Hash keccak256 siempre del lado del servidor** (`shared/invoice-hash.ts`).
+- **Cifrado AES-256-GCM** de los secrets de revelación delegados al agente.
 
-# e2e tests
-$ npm run test:e2e
+## Tests
 
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- 39 unitarios: auth (lockout, rotación, cambio de contraseña), invoices (doble financiamiento, transiciones), adapters, resilience (retry + circuit breaker), RBAC, keccak256.
+- 4 e2e: identidad del API, health, 401 sin sesión, validación de body.

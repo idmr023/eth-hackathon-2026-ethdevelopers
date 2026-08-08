@@ -2,14 +2,20 @@ import { apiFetch } from "./api";
 import type {
   AdapterPortalStatus,
   AdapterSignResult,
+  Auction,
+  AuctionResponse,
   AuditLogEntry,
+  AuditVerdict,
   DashboardOverview,
+  Delegation,
   Factor,
   FraudAlert,
   Invoice,
   InvoiceDetail,
   InvoiceListItem,
   InvoiceStatus,
+  OnChainCommitment,
+  PageResult,
   User,
 } from "./types";
 export const dashboardApi = {
@@ -91,4 +97,41 @@ export const usersApi = {
       method: "PATCH",
       body: { status },
     }),
+};
+
+export const auctionsApi = {
+  list: (query?: { page?: number; limit?: number }) =>
+    apiFetch<PageResult<Auction>>("/api/auctions", { query }),
+  detail: (id: string) => apiFetch<Auction>(`/api/auctions/${id}`),
+  bidders: (id: string) => apiFetch<string[]>(`/api/auctions/${id}/bidders`),
+  commitment: (id: string, bidder: string) =>
+    apiFetch<OnChainCommitment>(`/api/auctions/${id}/commitment/${bidder}`),
+  create: (body: {
+    title: string;
+    description?: string;
+    stakeAmount: string;
+    minPrice: string;
+    maxPrice: string;
+    commitEnd: string;
+    revealEnd: string;
+    treasury?: string;
+  }) => apiFetch<AuctionResponse>("/api/auctions", { method: "POST", body }),
+  delegateReveal: (
+    id: string,
+    body: { bidder: string; price: string; secret: string; proposalUri?: string },
+  ) =>
+    apiFetch<{ delegation: Delegation; status: Delegation["status"] }>(
+      `/api/auctions/${id}/delegate-reveal`,
+      { method: "POST", body },
+    ),
+  setAuditScore: (
+    id: string,
+    body: {
+      bidder: string;
+      aiScore: number;
+      docHash?: string;
+      summaryUri?: string;
+      modelVersion?: string;
+    },
+  ) => apiFetch<AuditVerdict>(`/api/auctions/${id}/audit-score`, { method: "POST", body }),
 };

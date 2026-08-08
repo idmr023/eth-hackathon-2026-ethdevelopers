@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsString,
   MinLength,
+  Matches,
   validateSync,
 } from 'class-validator';
 
@@ -12,6 +13,10 @@ export class EnvConfig {
   @IsString()
   @IsNotEmpty()
   DATABASE_URL!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  DATABASE_URL_UNPOOLED!: string;
 
   @IsString()
   @MinLength(32)
@@ -49,6 +54,13 @@ export class EnvConfig {
   @IsOptional()
   @IsString()
   SEED_ADMIN_PASSWORD?: string = 'ChangeMe123!';
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[0-9a-fA-F]{64}$/, {
+    message: 'AGENT_ENCRYPTION_KEY debe ser 64 caracteres hex (32 bytes)',
+  })
+  AGENT_ENCRYPTION_KEY?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvConfig {

@@ -8,25 +8,42 @@ const currencyFmt = new Intl.NumberFormat("es-PE", {
 
 const currencyFmtCache = new Map<string, Intl.NumberFormat>();
 
+// Tokens a código ISO 4217: Intl.NumberFormat solo acepta divisas fiat.
+const TOKEN_TO_ISO: Record<string, string> = {
+  USDC: "USD",
+  USDT: "USD",
+  DAI: "USD",
+};
+
 export function formatMoney(
   value: string | number,
   currency: string = "PEN",
 ): string {
   const number = typeof value === "string" ? Number(value) : value;
+  const safe = Number.isFinite(number) ? number : 0;
+  const iso = TOKEN_TO_ISO[currency] ?? currency;
   const formatter =
-    currency === "PEN"
+    iso === "PEN"
       ? currencyFmt
-      : currencyFmtCache.get(currency) ??
+      : currencyFmtCache.get(iso) ??
         (() => {
-          const fmt = new Intl.NumberFormat("es-PE", {
-            style: "currency",
-            currency,
-            maximumFractionDigits: 2,
-          });
-          currencyFmtCache.set(currency, fmt);
-          return fmt;
+          try {
+            const fmt = new Intl.NumberFormat("es-PE", {
+              style: "currency",
+              currency: iso,
+              maximumFractionDigits: 2,
+            });
+            currencyFmtCache.set(iso, fmt);
+            return fmt;
+          } catch {
+            const fmt = new Intl.NumberFormat("es-PE", {
+              maximumFractionDigits: 2,
+            });
+            currencyFmtCache.set(iso, fmt);
+            return fmt;
+          }
         })();
-  return formatter.format(Number.isFinite(number) ? number : 0);
+  return formatter.format(safe);
 }
 
 export function formatDate(value: string | Date): string {
