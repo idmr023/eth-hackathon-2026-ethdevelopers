@@ -70,6 +70,16 @@ export function LoginForm() {
       <Button type="submit" loading={loading} className="w-full">
         Iniciar sesión
       </Button>
+
+      <div className="mt-4 rounded-lg border border-border bg-surface/50 p-3 text-xs space-y-1">
+        <p className="font-semibold text-muted">Credenciales de prueba:</p>
+        <p className="text-foreground/80">
+          <span className="font-medium">Email:</span> admin@invoiceshield.dev
+        </p>
+        <p className="text-foreground/80">
+          <span className="font-medium">Contraseña:</span> ChangeMe123!
+        </p>
+      </div>
     </form>
   );
 }
