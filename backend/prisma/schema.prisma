@@ -54,20 +54,28 @@ enum DelegationStatus {
   FAILED
 }
 
+enum LicitacionPhase {
+  DRAFT
+  OPEN
+  REVEALING
+  CLOSED
+}
+
 // ── Models: Core InvoiceShield ──────────────────────────────────────
 model User {
-  id                 String         @id @default(cuid())
-  email              String         @unique
+  id                 String       @id @default(cuid())
+  email              String       @unique
   fullName           String
   passwordHash       String
-  role               UserRole       @default(ANALYST)
-  status             UserStatus     @default(ACTIVE)
-  mustChangePassword Boolean        @default(false)
+  role               UserRole     @default(ANALYST)
+  status             UserStatus   @default(ACTIVE)
+  mustChangePassword Boolean      @default(false)
   factorId           String?
-  factor             Factor?        @relation(fields: [factorId], references: [id])
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
+  factor             Factor?      @relation(fields: [factorId], references: [id])
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
   sessions           Session[]
+  licitaciones       Licitacion[]
 
   @@map("users")
 }
@@ -97,34 +105,34 @@ model LoginAttempt {
 }
 
 model Factor {
-  id                    String       @id @default(cuid())
-  name                  String
-  ruc                   String       @unique
-  status                String       @default("ACTIVE")
-  createdAt             DateTime     @default(now())
-  users                 User[]
-  invoices              Invoice[]
-  fraudAlertsExisting   FraudAlert[] @relation("FraudExistingFactor")
-  fraudAlertsAttempted  FraudAlert[] @relation("FraudAttemptedFactor")
+  id                   String       @id @default(cuid())
+  name                 String
+  ruc                  String       @unique
+  status               String       @default("ACTIVE")
+  createdAt            DateTime     @default(now())
+  users                User[]
+  invoices             Invoice[]
+  fraudAlertsExisting  FraudAlert[] @relation("FraudExistingFactor")
+  fraudAlertsAttempted FraudAlert[] @relation("FraudAttemptedFactor")
 
   @@map("factors")
 }
 
 model Invoice {
-  id           String         @id @default(cuid())
+  id           String        @id @default(cuid())
   rucEmisor    String
   rucReceptor  String
   numero       String
-  monto        Decimal        @db.Decimal(12, 2)
-  currency     String         @default("PEN")
-  hash         String         @unique
-  status       InvoiceStatus  @default(PENDING)
+  monto        Decimal       @db.Decimal(12, 2)
+  currency     String        @default("PEN")
+  hash         String        @unique
+  status       InvoiceStatus @default(PENDING)
   factorId     String
-  factor       Factor         @relation(fields: [factorId], references: [id])
+  factor       Factor        @relation(fields: [factorId], references: [id])
   metadata     String?
   registeredBy String
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   validations  Validation[]
   anomalies    Anomaly[]
 
@@ -158,17 +166,17 @@ model Anomaly {
 }
 
 model FraudAlert {
-  id                String  @id @default(cuid())
+  id                String   @id @default(cuid())
   invoiceHash       String
   rucEmisor         String
   rucReceptor       String
   numero            String
-  monto             Decimal @db.Decimal(12, 2)
+  monto             Decimal  @db.Decimal(12, 2)
   existingFactorId  String
-  existingFactor    Factor  @relation("FraudExistingFactor", fields: [existingFactorId], references: [id])
+  existingFactor    Factor   @relation("FraudExistingFactor", fields: [existingFactorId], references: [id])
   existingInvoiceId String
   attemptedFactorId String
-  attemptedFactor   Factor  @relation("FraudAttemptedFactor", fields: [attemptedFactorId], references: [id])
+  attemptedFactor   Factor   @relation("FraudAttemptedFactor", fields: [attemptedFactorId], references: [id])
   message           String
   createdAt         DateTime @default(now())
 
@@ -193,27 +201,27 @@ model AuditLog {
 // ── Models: Blockchain (nombres de tablas existentes en BD) ──────────
 // Mirror de BlindBidVault.sol auctions
 model Auction {
-  id               String          @id @default(cuid())
-  contractAddress  String          @map("contract_address") @db.VarChar(42)
-  auctionId        BigInt          @map("auction_id")
-  title            String          @db.VarChar(255)
-  description      String?         @db.VarChar(2000)
-  status           AuctionStatus   @default(ACTIVE)
-  organizerAddress String          @map("organizer_address") @db.VarChar(42)
-  treasuryAddress  String          @map("treasury_address") @db.VarChar(42)
-  tokenAddress     String          @map("token_address") @db.VarChar(42)
-  stakeAmount      BigInt          @map("stake_amount")
-  minPrice         BigInt          @map("min_price")
-  maxPrice         BigInt          @map("max_price")
-  priceWeight      Int             @map("price_weight")
-  qualityWeight    Int             @map("quality_weight")
-  commitEnd        DateTime        @map("commit_end")
-  revealEnd        DateTime        @map("reveal_end")
-  winner           String?         @db.VarChar(42)
-  winningPrice     BigInt?         @map("winning_price")
-  createdBlock     BigInt?         @map("created_block")
-  createdAt        DateTime        @default(now()) @map("created_at")
-  updatedAt        DateTime        @updatedAt @map("updated_at")
+  id               String        @id @default(cuid())
+  contractAddress  String        @map("contract_address") @db.VarChar(42)
+  auctionId        BigInt        @map("auction_id")
+  title            String        @db.VarChar(255)
+  description      String?       @db.VarChar(2000)
+  status           AuctionStatus @default(ACTIVE)
+  organizerAddress String        @map("organizer_address") @db.VarChar(42)
+  treasuryAddress  String        @map("treasury_address") @db.VarChar(42)
+  tokenAddress     String        @map("token_address") @db.VarChar(42)
+  stakeAmount      BigInt        @map("stake_amount")
+  minPrice         BigInt        @map("min_price")
+  maxPrice         BigInt        @map("max_price")
+  priceWeight      Int           @map("price_weight")
+  qualityWeight    Int           @map("quality_weight")
+  commitEnd        DateTime      @map("commit_end")
+  revealEnd        DateTime      @map("reveal_end")
+  winner           String?       @db.VarChar(42)
+  winningPrice     BigInt?       @map("winning_price")
+  createdBlock     BigInt?       @map("created_block")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
 
   delegations Delegation[]
   verdicts    AuditVerdict[]
@@ -227,19 +235,19 @@ model Auction {
 
 // Secretos delegados por bidders para auto-reveal (agent)
 model Delegation {
-  id               String             @id @default(cuid())
-  auctionId        String             @map("auction_id")
-  auction          Auction            @relation(fields: [auctionId], references: [id], onDelete: Cascade)
-  bidderAddress    String             @map("bidder_address") @db.VarChar(42)
-  commitmentHash   String             @map("commitment_hash") @db.VarChar(66)
-  price            BigInt
-  secretEncrypted  String?            @map("secret_encrypted")
-  proposalUri      String?            @map("proposal_uri") @db.VarChar(500)
-  status           DelegationStatus   @default(PENDING)
-  revealTxHash     String?            @map("reveal_tx_hash") @db.VarChar(66)
-  error            String?            @db.VarChar(500)
-  createdAt        DateTime           @default(now()) @map("created_at")
-  updatedAt        DateTime           @updatedAt @map("updated_at")
+  id              String           @id @default(cuid())
+  auctionId       String           @map("auction_id")
+  auction         Auction          @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  bidderAddress   String           @map("bidder_address") @db.VarChar(42)
+  commitmentHash  String           @map("commitment_hash") @db.VarChar(66)
+  price           BigInt
+  secretEncrypted String?          @map("secret_encrypted")
+  proposalUri     String?          @map("proposal_uri") @db.VarChar(500)
+  status          DelegationStatus @default(PENDING)
+  revealTxHash    String?          @map("reveal_tx_hash") @db.VarChar(66)
+  error           String?          @db.VarChar(500)
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
 
   @@unique([auctionId, bidderAddress], name: "delegation_auction_id_bidder_address_key")
   @@index([status])
@@ -278,4 +286,28 @@ model AuditLogBC {
   @@index([action])
   @@index([createdAt])
   @@map("audit_log")
+}
+
+// ── Models: Licitabien (licitaciones de sobre cerrado, demo cripto-invisible) ──
+// Licitaciones demo/creadas por usuarios. Montos en dólares (display), sin USDC.
+model Licitacion {
+  id            String          @id @default(cuid())
+  title         String          @db.VarChar(255)
+  category      String          @db.VarChar(100)
+  budget        Int
+  phase         LicitacionPhase @default(OPEN)
+  commitEnd     DateTime        @map("commit_end")
+  revealEnd     DateTime        @map("reveal_end")
+  description   String?         @db.VarChar(2000)
+  winnerId      String?         @map("winner_id") @db.VarChar(50)
+  winningAmount Int?            @map("winning_amount")
+  providers     Json?
+  organizerId   String?         @map("organizer_id")
+  organizer     User?           @relation(fields: [organizerId], references: [id])
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  @@index([phase])
+  @@index([organizerId])
+  @@map("licitacion")
 }

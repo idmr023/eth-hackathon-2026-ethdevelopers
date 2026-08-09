@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { TextInput, InlineError } from "@/components/ui/input";
 import { ApiError } from "@/lib/api";
 import { ErrorCodes } from "@/lib/auth";
+import { IconChain } from "@/components/licitabien/icons";
 
 export function LoginForm() {
   const { login } = useAuth();
@@ -22,7 +23,10 @@ export function LoginForm() {
     setLoading(true);
     try {
       await login(email, password);
-      router.replace("/auctions");
+      const from = new URLSearchParams(window.location.search).get("from");
+      router.replace(
+        from && from.startsWith("/") ? from : "/licitabien/dashboard",
+      );
     } catch (cause) {
       const message =
         cause instanceof ApiError
@@ -37,10 +41,15 @@ export function LoginForm() {
   return (
     <form
       onSubmit={onSubmit}
-      className="w-full max-w-sm space-y-4 rounded-xl border border-border bg-surface/80 p-6 shadow-[var(--shadow-glow)] backdrop-blur"
+      className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-white p-8 shadow-[var(--shadow-card)]"
     >
-      <div>
-        <h2 className="text-lg font-semibold text-foreground">Acceso al protocolo</h2>
+      <div className="text-center">
+        <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-brand-soft text-brand-dark">
+          <IconChain className="size-6" />
+        </span>
+        <h2 className="mt-4 font-display text-xl font-bold text-ink">
+          Acceso al protocolo
+        </h2>
         <p className="mt-1 text-sm text-muted">
           Ingresa con tus credenciales de LICITABIEN.
         </p>
@@ -71,12 +80,12 @@ export function LoginForm() {
         Iniciar sesión
       </Button>
 
-      <div className="mt-4 rounded-lg border border-border bg-surface/50 p-3 text-xs space-y-1">
+      <div className="rounded-lg border border-border bg-mist p-3 text-xs space-y-1">
         <p className="font-semibold text-muted">Credenciales de prueba:</p>
-        <p className="text-foreground/80">
+        <p className="text-ink/80">
           <span className="font-medium">Email:</span> admin@invoiceshield.dev
         </p>
-        <p className="text-foreground/80">
+        <p className="text-ink/80">
           <span className="font-medium">Contraseña:</span> ChangeMe123!
         </p>
       </div>

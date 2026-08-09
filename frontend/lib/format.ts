@@ -66,9 +66,9 @@ export const STATUS_LABELS: Record<InvoiceStatus, string> = {
 };
 
 export const STATUS_COLORS: Record<InvoiceStatus, string> = {
-  PENDING: "bg-amber-400/15 text-amber-300 border-amber-400/30",
-  VALIDATED: "bg-emerald-400/15 text-emerald-300 border-emerald-400/30",
-  BLOCKED: "bg-rose-400/15 text-rose-300 border-rose-400/30",
+  PENDING: "bg-amber-400/15 text-amber-700 border-amber-400/30",
+  VALIDATED: "bg-emerald-400/15 text-emerald-700 border-emerald-400/30",
+  BLOCKED: "bg-rose-400/15 text-rose-700 border-rose-400/30",
 };
 
 export function initials(name: string): string {

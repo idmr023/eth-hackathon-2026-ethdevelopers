@@ -105,6 +105,52 @@ Registro cronológico de trabajo por fases. Formato: `[fase.x] descripción`.
 - [fase.6.contracts] Dirección propagada: `backend/.env` (`BLIND_BID_VAULT_ADDRESS`), `frontend/.env.local` (`NEXT_PUBLIC_BLIND_BID_VAULT_ADDRESS_SEPOLIA`) y fallback en `frontend/lib/web3/contracts/addresses.ts`.
 - [fase.6.contracts] Fix CORS en `backend/.env.example`: `ALLOWED_ORIGINS` era `"http://...","https://..."` (comillas por valor que rompían `allowedOrigins()` de `config.ts`); ahora es un único string separado por comas.
 
+## [fase.7.licitabien] — UI LICITABIEN (tema claro + demo cripto-invisible) (completado)
+
+- [fase.7.licitabien] Fundación visual: fuentes DM Sans/Inter/JetBrains Mono vía `next/font/google` en `app/layout.tsx`; tokens de marca (emerald `#00C07A`, navy `#0D1B2E`) en `globals.css` + override scoped `.licitabien` del tema claro (sin tocar el tema oscuro de InvoiceShield); keyframes nuevos centralizados en `lib/animations.ts`.
+- [fase.7.licitabien] Dominio mock: `lib/licitabien/{types,mock-data,format,chain,use-countdown}.ts` + tests `format.test.ts` (10 tests de countdown/monedas).
+- [fase.7.licitabien] Kit de componentes `components/licitabien/`: PhaseBadge (4 estados + punto pulsante), ChainBadge (Arbiscan), CountdownRow (terminal navy con ticking 1s vía `useSyncExternalStore`), LockNote, TrustBadge (Garantía de Cero Manipulación), RwaCard (Financiamiento Inteligente / adelanto), CredentialCard + ReputationHeader (EAS), Timeline, Podium (Oro/Plata/Bronce + prueba Arbiscan), KpiCard, FilterPills, SuccessModal (loader verde → ¡Licitación Creada!), LicitacionWizard (3 pasos, misma vista), navegación del demo.
+- [fase.7.licitabien] Landing pública en `/` (reemplaza el redirect): hero 2 columnas con tarjeta de licitación sellada (timer real, proveedores comprometidos, hashes, candado), métricas y sección de privacidad navy; botones "Iniciar sesión" → `/login` y "Registrarse" stub preparado para DB.
+- [fase.7.licitabien] Demo comprador en `/licitabien/dashboard`: 4 KPIs, tabla LIC-2024-001…004 con filtros (Todas/Activas/Borradores/Cerradas), countdown en vivo por fila, indicador "Sincronizado con el contrato" y wizard modal sin cambio de página.
+- [fase.7.licitabien] Detalle en `/licitabien/licitaciones/[id]`: timeline Publicada→Compromisos→Revelación→Resultado, compromisos sellados/revelados y Podio de ganadores con "Ver prueba en Arbiscan".
+- [fase.7.licitabien] Demo proveedor en `/licitabien/proveedor`: licitación ganada + Financiamiento DeFi (Orden de Compra Tokenizada, CTA Factoring), formulario de oferta con TrustBadge y confirmación de sello.
+- [fase.7.licitabien] Reputación EAS en `/licitabien/proveedor/perfil`: insignias criptográficas, Identidad Soberana, botones "Exportar credencial" / "Verificar en explorador".
+- [fase.7.licitabien] Integración on-chain real: `lib/licitabien/chain.ts` con lecturas en vivo de `BlindBidVault` (Arbitrum Sepolia) vía hooks wagmi existentes (`useAuctionsCount`, `useAuction`; estado leído por índice `auction[7]`), enlaces Arbiscan reales y fallback elegante si el RPC falla.
+- [fase.7.licitabien] Calidad: lint, typecheck y 33 tests en verde; `next build` OK con todas las rutas (landing, demo y panel existente intacto); smoke test HTTP 200 en las 7 rutas (`/`, `/login`, `/licitabien/*`).
+
+## [fase.7.licitabien.data] — Backend como fuente de verdad (completado)
+
+- [fase.7.licitabien.data] Schema Prisma: modelo `Licitacion` (+ enum `LicitacionPhase` y relación con `User`) con montos en enteros S/, fechas commit/reveal y `providers` JSON con el shape `LicitacionProveedor`; sync vía `prisma db push` (la BD remota de Neon ya tenía drift de migraciones) y generate.
+- [fase.7.licitabien.data] `prisma/seed.ts`: 4 licitaciones demo `LIC-2024-001…004` con IDs estables para no romper URLs, hashes de compromiso y podio de la cerrada.
+- [fase.7.licitabien.data] Módulo NestJS `licitaciones`: `GET /api/licitaciones` (público), `GET /api/licitaciones/:id` (público), `POST /api/licitaciones` y `POST /api/licitaciones/join` (requieren sesión vía guard global; sin roles). DTOs class-validator (whitelist estricta global), commitment Keccak256 real con viem, montos nunca persistidos (semántica de sobre cerrado).
+- [fase.7.licitabien.data] Frontend `lib/licitabien/api.ts` (servicio con fallback a mock solo ante error de infraestructura) + hooks `use-licitaciones.ts` (`useLicitaciones` con `refresh` reutilizable y `useLicitacion` cancel-safe, sin `setState` síncrono en efectos).
+- [fase.7.licitabien.data] Dashboard comprador consume el backend: las licitaciones creadas desde el wizard aparecen en la misma vista unificada; indicador de sincronización reemplazado por texto neutro.
+- [fase.7.licitabien.data] Detalle por id desde el backend; el podio se deriva de los proveedores revelados (top 3 por monto) en vez del mock.
+- [fase.7.licitabien.data] Login obligatorio para crear (wizard) y participar (oferta sellada): redirección a `/login?from=…` si no hay sesión, redirección respetada por `LoginForm`, y estados `publishing`/`sending` en los botones.
+- [fase.7.licitabien.data] Nav con sesión: muestra el email del usuario autenticado en vez del botón fijo "Iniciar sesión".
+- [fase.7.licitabien.data] Calidad: backend y frontend con lint + typecheck limpios; 39 tests backend y 33 tests frontend en verde; smoke test E2E (login → crear → join, y 401 sin sesión) contra el servidor en vivo.
+
+## [fase.7.licitabien.unify] — Diseño único LICITABIEN en toda la app (completado)
+
+- [fase.7.licitabien.unify] Tema claro global: los tokens LICITABIEN (emerald/navy/ink/mist, fuentes DM Sans/Inter/JetBrains Mono) se movieron a `:root` en `globals.css`; `color-scheme: light`, `body` en claro y glow radial del brand; el bloque scoped `.licitabien` se conserva como override inofensivo.
+- [fase.7.licitabien.unify] Contraste del UI kit en claro: `Button` primary ahora es blanco sobre el verde de marca (se quitó el `text-[#04121a] hover:bg-cyan-300`), `Badge`/`InlineSuccess`/`STATUS_COLORS` pasaron de tonos `-300` a `-600/700` para texto legible sobre fondo claro.
+- [fase.7.licitabien.unify] `AppShell` unificado con la marca: logo LICITABIEN en el sidebar, fondo blanco, activos en `brand-soft`/`brand-dark`, header `bg-white/85` con iniciales en `brand-soft`; se añadieron al sidebar los accesos al demo (comprador, proveedor, perfil) junto a Licitaciones BlindBid y Usuarios.
+- [fase.7.licitabien.unify] `/login` con el marco del producto: header con logo + "Volver al inicio", card redondeada `rounded-2xl` con icono de marca y credenciales demo en `bg-mist`; el destino por defecto tras iniciar sesión (sin `?from=`) pasa de `/auctions` a `/licitabien/dashboard`.
+- [fase.7.licitabien.unify] CTA inteligentes en la landing: "Publicar mi primera licitación gratis" y "Listo para iniciar con garantías, dale clic aquí" revisan sesión (`useAuth`) → con sesión van a `/licitabien/dashboard`, sin sesión a `/login?from=/licitabien/dashboard`; el header de la landing muestra el email si ya hay sesión.
+- [fase.7.licitabien.unify] Calidad: lint + typecheck limpios y 33 tests frontend en verde; smoke HTTP 200 en `/`, `/login`, `/licitabien/dashboard`, `/licitabien/proveedor` y `/auctions`.
+
+## [fase.7.licitabien.roles] — Separación de roles licitante/licitador (completado)
+
+- [fase.7.licitabien.roles] Backend `licitaciones`: `serialize()` ahora expone `organizerId`; `POST /api/licitaciones/join` lee el usuario de sesión (`@CurrentUser`) y persiste el proveedor con `userId` en el JSON `providers`. La detección de duplicado valida por `name` **o** `userId` (un mismo usuario no puede ofertar dos veces, aun con nombres distintos).
+- [fase.7.licitabien.roles] Seed: todas las licitaciones demo (`LIC-2024-001…004`) quedan con `organizerId: admin.id`; nueva **LIC-2024-005** "Auditoría de seguridad informática 2025" (OPEN, S/ 3 600 000) con participación del admin como proveedor (`userId: admin.id`) para demostrar ambas caras del flujo; upsert actualiza `organizerId`/`phase` en registros existentes (reseed idempotente).
+- [fase.7.licitabien.roles] Frontend: `lib/licitabien/persona.ts` mapea sesión → persona (`ADMIN` = licitante, resto = licitador) con rutas `PERSONA_ROUTES` y helper `getPersonaRoute`; `require-auth.tsx` (gate con redirect a `/login?from=…` + spinner) y `unified-dashboard-view.tsx` (elige panel según persona) en `components/licitabien/`.
+- [fase.7.licitabien.roles] Rutas nuevas: `/licitabien/licitante` (panel del organizador), `/licitabien/licitador` (panel del proveedor) y `/licitabien/perfil` (reputación), todas bajo `RequireAuth`. Redirecciones: `/licitabien/dashboard` → panel según persona, `/licitabien/proveedor` → `/licitabien/licitador`, `/licitabien/proveedor/perfil` → `/licitabien/perfil`.
+- [fase.7.licitabien.roles] Paneles filtrados por rol: el licitante solo ve sus licitaciones (`organizerId === user.id` o sin organizer), el licitador solo sus ofertas (`providers` con su `userId`); encabezados "Panel licitante"/"Panel licitador" y detalle con "Volver" hacia el panel de la persona (`getPersonaRoute`).
+- [fase.7.licitabien.roles] Navbar y shell por rol: `LicitabienNav` muestra los enlaces de la persona autenticada + botón "Cerrar sesión" (o "Iniciar sesión" sin sesión), logo que vuelve al panel; `AppShell` filtra los accesos demo según persona; wizard y CTA de la landing redirigen a `/login?from=/licitabien/licitante` (o al panel si hay sesión).
+- [fase.7.licitabien.roles] Calidad: lint + typecheck limpios en backend y frontend; 39 tests backend y 33 tests frontend en verde; `next build` OK con las 21 rutas (incluye las 3 nuevas y los 3 redirects); reseed aplicado contra Neon.
+
+
+
 
 
 

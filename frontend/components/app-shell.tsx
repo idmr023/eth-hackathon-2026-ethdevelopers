@@ -10,6 +10,8 @@ import { can, Permissions, type Permission } from "@/lib/permissions";
 import { ForceChangePassword } from "@/components/modules/auth/force-change-password";
 import { ApiError } from "@/lib/api";
 import { initials } from "@/lib/format";
+import { Logo } from "@/components/licitabien/licitabien-nav";
+import { getPersona, type Persona } from "@/lib/licitabien/persona";
 
 interface NavItem {
   href: string;
@@ -18,9 +20,21 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/auctions", label: "Licitaciones", permission: Permissions.AUCTIONS_VIEW },
+  {
+    href: "/auctions",
+    label: "Licitaciones BlindBid",
+    permission: Permissions.AUCTIONS_VIEW,
+  },
   { href: "/admin/users", label: "Usuarios", permission: Permissions.USERS_MANAGE },
 ];
+
+const DEMO_ITEMS: Record<Persona, NavItem[]> = {
+  licitante: [{ href: "/licitabien/licitante", label: "Panel licitante" }],
+  licitador: [
+    { href: "/licitabien/licitador", label: "Panel licitador" },
+    { href: "/licitabien/perfil", label: "Perfil y reputación" },
+  ],
+};
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, status, logout } = useAuth();
@@ -49,6 +63,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     (item) => !item.permission || can(user, item.permission),
   );
 
+  const demoItems = DEMO_ITEMS[getPersona(user)];
+
   async function handleLogout() {
     setLoggingOut(true);
     try {
@@ -63,15 +79,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-full">
-      <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r border-border bg-surface/60">
-        <div className="flex items-center gap-2 px-5 py-5">
-          <span className="size-2.5 rounded-full bg-primary shadow-[var(--shadow-glow)]" />
-          <span className="font-mono text-sm font-bold tracking-widest text-foreground">
-            LICITA<span className="text-primary">BIEN</span>
-          </span>
+    <div className="flex min-h-full bg-mist">
+      <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r border-border bg-white">
+        <div className="px-5 py-5">
+          <Logo />
         </div>
         <nav className="flex-1 space-y-1 px-3">
+          <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-widest text-muted">
+            Demo LICITABIEN
+          </p>
+          {demoItems.map((item) => {
+            const active =
+              pathname === item.href || pathname.startsWith(`${item.href}/`);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
+                  active
+                    ? "bg-brand-soft text-brand-dark border-l-2 border-brand"
+                    : "text-navy/70 hover:bg-mist hover:text-ink border-l-2 border-transparent"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+          <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-widest text-muted">
+            Protocolo
+          </p>
           {items.map((item) => {
             const active =
               pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -81,8 +117,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 href={item.href}
                 className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
                   active
-                    ? "bg-primary/10 text-primary border-l-2 border-primary"
-                    : "text-muted hover:bg-surface-2 hover:text-foreground border-l-2 border-transparent"
+                    ? "bg-brand-soft text-brand-dark border-l-2 border-brand"
+                    : "text-navy/70 hover:bg-mist hover:text-ink border-l-2 border-transparent"
                 }`}
               >
                 {item.label}
@@ -99,17 +135,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-background/80 px-6 py-3 backdrop-blur">
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-white/85 px-6 py-3 backdrop-blur">
           <p className="font-mono text-xs text-muted">
             /{pathname.replace(/^\//, "")}
           </p>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2.5">
-              <span className="flex size-8 items-center justify-center rounded-full bg-surface-2 font-mono text-xs font-semibold text-primary">
+              <span className="flex size-8 items-center justify-center rounded-full bg-brand-soft font-mono text-xs font-semibold text-brand-dark">
                 {initials(user.email)}
               </span>
               <div className="hidden text-right sm:block">
-                <p className="text-sm leading-tight text-foreground">{user.email}</p>
+                <p className="text-sm leading-tight text-ink">{user.email}</p>
                 <div className="mt-0.5">
                   <RoleBadge role={user.role} />
                 </div>

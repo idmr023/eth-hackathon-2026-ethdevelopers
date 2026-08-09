@@ -93,7 +93,7 @@ export function InlineError({ message }: { message?: string | null }) {
 export function InlineSuccess({ message }: { message?: string | null }) {
   if (!message) return null;
   return (
-    <p className="rounded-md border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-sm text-emerald-300">
+    <p className="rounded-md border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-sm text-emerald-700">
       {message}
     </p>
   );

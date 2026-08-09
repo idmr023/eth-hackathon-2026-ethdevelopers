@@ -17,6 +17,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { HealthModule } from './modules/health/health.module';
 import { BlockchainModule } from './modules/blockchain/blockchain.module';
 import { BiddingModule } from './modules/bidding/bidding.module';
+import { LicitacionesModule } from './modules/licitaciones/licitaciones.module';
 import { AuthGuard } from './common/guards/auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
@@ -51,6 +52,7 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
     HealthModule,
     BlockchainModule,
     BiddingModule,
+    LicitacionesModule,
   ],
   controllers: [AppController],
   providers: [

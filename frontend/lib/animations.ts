@@ -4,6 +4,10 @@ import type { CSSProperties } from "react";
 export const ANIM = {
   fadeUp: "anim-fade-up",
   pulseDot: "anim-pulse-dot",
+  blink: "anim-blink",
+  checkPop: "anim-check-pop",
+  growBar: "anim-grow-bar",
+  floatSlow: "anim-float-slow",
 } as const;
 
 export type AnimName = keyof typeof ANIM;

@@ -7,9 +7,9 @@ export type BadgeTone = "neutral" | "info" | "success" | "warning" | "danger";
 const TONES: Record<BadgeTone, string> = {
   neutral: "border-border bg-surface-2 text-muted",
   info: "border-primary/30 bg-primary/15 text-primary",
-  success: "border-emerald-400/30 bg-emerald-400/15 text-emerald-300",
-  warning: "border-amber-400/30 bg-amber-400/15 text-amber-300",
-  danger: "border-rose-400/30 bg-rose-400/15 text-rose-300",
+  success: "border-emerald-400/30 bg-emerald-400/15 text-emerald-700",
+  warning: "border-amber-400/30 bg-amber-400/15 text-amber-700",
+  danger: "border-rose-400/30 bg-rose-400/15 text-rose-700",
 };
 
 export function Badge({
