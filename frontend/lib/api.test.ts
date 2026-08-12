@@ -30,7 +30,7 @@ describe("apiFetch", () => {
     });
     const result = await apiFetch<{ id: string }[]>("/api/invoices");
     expect(result).toEqual({ data: [{ id: "1" }], total: 3 });
-    expect(fn.mock.calls[0][0]).toBe("http://localhost:4000/api/invoices");
+    expect(fn.mock.calls[0][0]).toBe("/api/invoices");
   });
 
   it("serializa query strings omitiendo vacíos", async () => {

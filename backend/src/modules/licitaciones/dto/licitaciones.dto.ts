@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Length, Min } from 'class-validator';
 
 export class CreateLicitacionDto {
@@ -45,6 +46,14 @@ export class JoinLicitacionDto {
   @Length(1, 120)
   bidderName!: string;
 
+  @ApiProperty({ example: 1200000 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  amount!: number;
+}
+
+export class RevealLicitacionDto {
   @ApiProperty({ example: 1200000 })
   @IsInt()
   @Min(1)

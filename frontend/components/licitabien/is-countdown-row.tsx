@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useCountdown } from "@/lib/licitabien/use-countdown";
 import { ANIM } from "@/lib/animations";
 import { IconClock } from "./icons";
@@ -30,7 +31,15 @@ export function CountdownRow({
   target: string;
   label?: string;
 }) {
-  const t = useCountdown(target);
+  const [mounted, setMounted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- Mounted pattern: safe one-time initialization to avoid SSR hydration mismatch
+  useEffect(() => setMounted(true), []);
+
+  const live = useCountdown(target);
+
+  const t = mounted
+    ? live
+    : { days: "--", hours: "--", minutes: "--", seconds: "--", totalMs: 0, done: false };
 
   return (
     <div className="rounded-xl bg-navy px-5 py-4 text-white shadow-[var(--shadow-card)]">

@@ -18,9 +18,11 @@ import { ConfigService } from '@nestjs/config';
 const adminActor: AuthUser = {
   id: 'user-1',
   email: 'admin@invoiceshield.dev',
+  fullName: 'Admin',
   role: UserRole.ADMIN,
   permissions: [],
   mustChangePassword: false,
+  totpEnabled: false,
   factorId: null,
 };
 

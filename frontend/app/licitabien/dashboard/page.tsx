@@ -4,10 +4,10 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth } from "@/components/is-auth-provider";
 import { Spinner } from "@/components/ui/button";
-import { getPersonaRoute } from "@/lib/licitabien/persona";
+import { DEFAULT_APP_ROUTE } from "@/lib/licitabien/persona";
 
 export default function LicitabienDashboardPage() {
-  const { user, status } = useAuth();
+  const { status } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -16,9 +16,9 @@ export default function LicitabienDashboardPage() {
       return;
     }
     if (status === "authenticated") {
-      router.replace(getPersonaRoute(user));
+      router.replace(DEFAULT_APP_ROUTE);
     }
-  }, [status, user, router]);
+  }, [status, router]);
 
   return (
     <main className="flex flex-1 items-center justify-center gap-2 text-muted">

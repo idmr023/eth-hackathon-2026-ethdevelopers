@@ -33,10 +33,13 @@ export type AnomalyType = (typeof AnomalyType)[keyof typeof AnomalyType];
 export interface AuthUser {
   id: string;
   email: string;
+  fullName: string;
   role: string;
   permissions: string[];
   mustChangePassword: boolean;
+  totpEnabled: boolean;
   factorId: string | null;
+  walletAddress: string | null;
 }
 
 export interface AuthUserView {
@@ -45,7 +48,9 @@ export interface AuthUserView {
   fullName: string;
   role: string;
   mustChangePassword: boolean;
+  totpEnabled: boolean;
   factorId: string | null;
+  walletAddress: string | null;
 }
 
 export interface Factor {

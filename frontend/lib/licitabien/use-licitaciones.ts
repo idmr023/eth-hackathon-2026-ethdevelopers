@@ -33,6 +33,13 @@ export function useLicitacion(id: string) {
   const [licitacion, setLicitacion] = useState<Licitacion | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    const found = await getLicitacion(id);
+    setLicitacion(found);
+    setLoading(false);
+  }, [id]);
+
   useEffect(() => {
     let cancelled = false;
     void getLicitacion(id).then((found) => {
@@ -45,5 +52,5 @@ export function useLicitacion(id: string) {
     };
   }, [id]);
 
-  return { licitacion, loading };
+  return { licitacion, loading, refresh };
 }

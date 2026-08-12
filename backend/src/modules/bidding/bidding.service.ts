@@ -14,12 +14,15 @@ import { ArbitrumService } from '../blockchain/arbitrum.service';
 import { blindBidVaultAbi } from '../blockchain/abi/blind-bid-vault.abi';
 import { CryptoService } from '../../shared/crypto.service';
 import { PrismaService } from '../../shared/prisma.service';
+import { CredentialsService } from '../credentials/credentials.service';
 
 const BID_COMMITTED_EVENT = parseAbiItem(
   'event BidCommitted(uint256 indexed auctionId, address indexed bidder, bytes32 commitment)',
 );
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+const ZERO_HASH: `0x${string}` =
+  '0x0000000000000000000000000000000000000000000000000000000000000000';
 
 export interface OnChainAuction {
   organizer: Address;
@@ -74,6 +77,7 @@ export class BiddingService {
     private readonly prisma: PrismaService,
     private readonly blockchain: ArbitrumService,
     private readonly crypto: CryptoService,
+    private readonly credentials: CredentialsService,
     configService: ConfigService,
   ) {
     this.tokenDecimals = parseInt(
@@ -382,7 +386,10 @@ export class BiddingService {
   }
 
   /**
-   * Records an AI quality score for a bidder (auditor only).
+   * Records an AI quality score for a bidder (auditor only). Writes on-chain
+   * (setAuditScore, AUDITOR_ROLE) when the operator signer is configured, then
+   * upserts the mirror. If the chain is not configured, only the mirror is
+   * updated (dev/test mode) with a warning.
    */
   async recordAuditScore(
     auctionId: bigint,
@@ -393,6 +400,33 @@ export class BiddingService {
     modelVersion?: string,
   ): Promise<AuditVerdict> {
     const auction = await this.syncAuction(auctionId);
+
+    if (aiScore < 0 || aiScore > 100) {
+      throw new AppError(
+        ErrorCodes.VALIDATION_ERROR,
+        HttpStatus.BAD_REQUEST,
+        'aiScore debe estar entre 0 y 100.',
+      );
+    }
+
+    if (this.blockchain.canWrite()) {
+      await this.blockchain.send({
+        address: this.getVaultAddress(),
+        abi: blindBidVaultAbi,
+        functionName: 'setAuditScore',
+        args: [
+          auctionId,
+          bidder,
+          BigInt(aiScore),
+          docHash ?? ZERO_HASH,
+          summaryUri ?? '',
+        ],
+      });
+    } else {
+      this.logger.warn(
+        'Blockchain write not configured: setAuditScore only mirrored (dev mode).',
+      );
+    }
 
     return this.prisma.auditVerdict.upsert({
       where: {
@@ -416,6 +450,133 @@ export class BiddingService {
         modelVersion: modelVersion ?? null,
       },
     });
+  }
+
+  /**
+   * Auto-reveal: el backend revela en nombre del bidder usando el secreto
+   * delegado cifrado (permissionless revealBid). Solo retorna txHash; el
+   * espejo de la delegación se marca REVEALED.
+   */
+  async autoReveal(
+    auctionId: bigint,
+    bidder: Address,
+  ): Promise<{ txHash: string }> {
+    if (!this.blockchain.canWrite()) {
+      throw new AppError(
+        ErrorCodes.BLOCKCHAIN_NOT_CONFIGURED,
+        HttpStatus.SERVICE_UNAVAILABLE,
+        'Blockchain write operations not configured (missing ARBITRUM_PRIVATE_KEY).',
+      );
+    }
+    const auction = await this.syncAuction(auctionId);
+    const delegation = await this.prisma.delegation.findUnique({
+      where: {
+        delegation_auction_id_bidder_address_key: {
+          auctionId: auction.id,
+          bidderAddress: bidder.toLowerCase(),
+        },
+      },
+    });
+    if (!delegation || !delegation.secretEncrypted) {
+      throw new AppError(
+        ErrorCodes.BID_NOT_COMMITTED,
+        HttpStatus.NOT_FOUND,
+        'No hay secreto delegado para este bidder.',
+      );
+    }
+    const secret = this.crypto.decrypt(delegation.secretEncrypted);
+    const price = delegation.price;
+
+    const tx = await this.blockchain.send({
+      address: this.getVaultAddress(),
+      abi: blindBidVaultAbi,
+      functionName: 'revealBid',
+      args: [auctionId, bidder, price, secret],
+    });
+
+    await this.prisma.delegation.update({
+      where: { id: delegation.id },
+      data: { status: 'REVEALED', revealTxHash: tx.hash },
+    });
+    await this.syncAuction(auctionId);
+    return { txHash: tx.hash };
+  }
+
+  /**
+   * settleAuction: permissionless. El backend liquida tras revealEnd y
+   * sincroniza el mirror (winner/winningPrice).
+   */
+  async settleAuctionOnChain(auctionId: bigint): Promise<{ txHash: string }> {
+    if (!this.blockchain.canWrite()) {
+      throw new AppError(
+        ErrorCodes.BLOCKCHAIN_NOT_CONFIGURED,
+        HttpStatus.SERVICE_UNAVAILABLE,
+        'Blockchain write operations not configured (missing ARBITRUM_PRIVATE_KEY).',
+      );
+    }
+    const tx = await this.blockchain.send({
+      address: this.getVaultAddress(),
+      abi: blindBidVaultAbi,
+      functionName: 'settleAuction',
+      args: [auctionId],
+    });
+    const auction = await this.syncAuction(auctionId);
+    if (auction.winner) {
+      try {
+        await this.credentials.attest(
+          auction.winner as Address,
+          `Contrato $${this.formatPrice(auction.winningPrice!)} cumplido`,
+          `Entrega íntegra de licitación #${auctionId} verificada on-chain.`,
+          'Protocolo Licitabien',
+          auctionId,
+          auction.winningPrice!,
+          0, // aiScore
+          'gold',
+          '',
+        );
+      } catch (e) {
+        this.logger.error(
+          `Failed to attest winner for auction ${auctionId}: ${String(e)}`,
+        );
+      }
+    }
+    return { txHash: tx.hash };
+  }
+
+  /**
+   * slashBid: permissionless tras revealEnd. Marca la delegación como FAILED.
+   */
+  async slashBidOnChain(
+    auctionId: bigint,
+    bidder: Address,
+  ): Promise<{ txHash: string }> {
+    if (!this.blockchain.canWrite()) {
+      throw new AppError(
+        ErrorCodes.BLOCKCHAIN_NOT_CONFIGURED,
+        HttpStatus.SERVICE_UNAVAILABLE,
+        'Blockchain write operations not configured (missing ARBITRUM_PRIVATE_KEY).',
+      );
+    }
+    const tx = await this.blockchain.send({
+      address: this.getVaultAddress(),
+      abi: blindBidVaultAbi,
+      functionName: 'slashBid',
+      args: [auctionId, bidder],
+    });
+
+    const auction = await this.syncAuction(auctionId);
+    await this.prisma.delegation
+      .updateMany({
+        where: {
+          auctionId: auction.id,
+          bidderAddress: bidder.toLowerCase(),
+        },
+        data: { status: 'FAILED' },
+      })
+      .catch((error: unknown) => {
+        this.logger.warn(`slashBid mirror update failed: ${String(error)}`);
+      });
+    return { txHash: tx.hash };
   }
 
   /** keccak256(abi.encodePacked(uint256 price, string secret)) — matches the contract. */

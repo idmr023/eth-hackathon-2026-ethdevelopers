@@ -4,10 +4,13 @@ import type { AuthenticatedRequest } from '../auth-request';
 export interface AuthUser {
   id: string;
   email: string;
+  fullName: string;
   role: string;
   permissions: string[];
   mustChangePassword: boolean;
+  totpEnabled: boolean;
   factorId: string | null;
+  walletAddress?: string | null;
 }
 
 export const CurrentUser = createParamDecorator(

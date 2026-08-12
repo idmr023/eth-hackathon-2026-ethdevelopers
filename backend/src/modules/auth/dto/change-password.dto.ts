@@ -1,7 +1,7 @@
 import { IsString, Matches, MinLength } from 'class-validator';
 
 // Password: 8-72 chars, al menos una mayúscula, una minúscula y un dígito.
-const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,72}$/;
+export const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,72}$/;
 
 export class ChangePasswordDto {
   @IsString()

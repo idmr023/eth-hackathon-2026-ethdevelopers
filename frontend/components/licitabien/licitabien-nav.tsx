@@ -4,17 +4,15 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/is-auth-provider";
 import { useVaultLiveStats } from "@/lib/licitabien/chain";
-import { getPersona, getPersonaRoute, type Persona } from "@/lib/licitabien/persona";
-import { logout } from "@/lib/auth";
+import { DEFAULT_APP_ROUTE } from "@/lib/licitabien/persona";
 import { IconChain } from "./icons";
 
-const PERSONA_LINKS: Record<Persona, { href: string; label: string }[]> = {
-  licitante: [{ href: "/licitabien/licitante", label: "Panel licitante" }],
-  licitador: [
-    { href: "/licitabien/licitador", label: "Panel licitador" },
-    { href: "/licitabien/perfil", label: "Perfil y reputación" },
-  ],
-};
+// Switch libre: cualquier sesión ve ambos paneles + perfil.
+const AUTH_LINKS = [
+  { href: DEFAULT_APP_ROUTE, label: "Panel licitante" },
+  { href: "/licitabien/licitador", label: "Panel licitador" },
+  { href: "/licitabien/perfil", label: "Perfil y reputación" },
+];
 
 export function Logo({ href = "/" }: { href?: string }) {
   return (
@@ -34,10 +32,9 @@ export function LicitabienNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { stats } = useVaultLiveStats();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
-  const persona = user ? getPersona(user) : null;
-  const links = persona ? PERSONA_LINKS[persona] : [];
+  const links = user ? AUTH_LINKS : [];
 
   async function handleLogout() {
     await logout();
@@ -47,7 +44,7 @@ export function LicitabienNav() {
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-white/85 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-6">
-        <Logo href={persona ? getPersonaRoute(user) : "/"} />
+        <Logo href={user ? DEFAULT_APP_ROUTE : "/"} />
         <nav className="hidden items-center gap-1 md:flex">
           {links.map((link) => {
             const active =
@@ -75,7 +72,7 @@ export function LicitabienNav() {
             <IconChain className="size-3" />
             {stats
               ? `${stats.totalAuctions ?? "—"} subastas on-chain · ${stats.chainName}`
-              : "Conectando a Arbitrum…"}
+              : "Modo demo"}
           </span>
           {user ? (
             <span className="flex items-center gap-2">
@@ -85,6 +82,12 @@ export function LicitabienNav() {
               >
                 {user.email}
               </span>
+              <Link
+                href="/licitabien/cuenta"
+                className="rounded-lg border border-border px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:border-brand/50"
+              >
+                Mi cuenta
+              </Link>
               <button
                 type="button"
                 onClick={handleLogout}
@@ -94,12 +97,20 @@ export function LicitabienNav() {
               </button>
             </span>
           ) : (
-            <Link
-              href="/login"
-              className="rounded-lg border border-border px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:border-brand/50"
-            >
-              Iniciar sesión
-            </Link>
+            <span className="flex items-center gap-2">
+              <Link
+                href="/login"
+                className="rounded-lg border border-border px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:border-brand/50"
+              >
+                Iniciar sesión
+              </Link>
+              <Link
+                href="/register"
+                className="rounded-lg bg-brand px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
+              >
+                Registrarse
+              </Link>
+            </span>
           )}
         </div>
       </div>

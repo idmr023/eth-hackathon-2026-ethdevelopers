@@ -1,5 +1,6 @@
 import type { Credential } from "@/lib/licitabien/types";
 import { IconBadgeCheck, IconExternal, IconShield } from "./icons";
+import { EAS_SCHEMA_UID } from "@/lib/web3/contracts/addresses";
 
 const BADGE_STYLES: Record<
   Credential["badge"],
@@ -52,7 +53,11 @@ export function CredentialCard({ credential }: { credential: Credential }) {
   );
 }
 
-export function ReputationHeader() {
+export function ReputationHeader({ credentialUid }: { credentialUid?: string }) {
+  const easExplorerUrl = credentialUid
+    ? `https://sepolia.arbiscan.io/address/${EAS_SCHEMA_UID}#code`
+    : undefined;
+
   return (
     <div className="flex flex-col gap-4 rounded-xl border border-navy/10 bg-navy p-6 text-white lg:flex-row lg:items-center lg:justify-between">
       <div className="flex items-start gap-4">
@@ -79,17 +84,28 @@ export function ReputationHeader() {
       <div className="flex shrink-0 gap-2">
         <button
           type="button"
+          onClick={() => {
+            if (credentialUid) {
+              navigator.clipboard.writeText(credentialUid);
+            } else {
+              alert("Aún no tienes credenciales on-chain. Participa en una licitación y gana un contrato para recibir tu primera insignia.");
+            }
+          }}
           className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
         >
           <IconExternal className="size-4" />
-          Exportar credencial
+          {credentialUid ? "Copiar UID" : "Exportar credencial"}
         </button>
-        <button
-          type="button"
-          className="inline-flex items-center gap-2 rounded-lg border border-white/25 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/10"
-        >
-          Verificar en explorador
-        </button>
+        {easExplorerUrl && (
+          <a
+            href={easExplorerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-white/25 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/10"
+          >
+            Verificar en explorador
+          </a>
+        )}
       </div>
     </div>
   );

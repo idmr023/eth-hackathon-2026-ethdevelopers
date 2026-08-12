@@ -11,7 +11,7 @@ import { ForceChangePassword } from "@/components/modules/auth/force-change-pass
 import { ApiError } from "@/lib/api";
 import { initials } from "@/lib/format";
 import { Logo } from "@/components/licitabien/licitabien-nav";
-import { getPersona, type Persona } from "@/lib/licitabien/persona";
+import { DEFAULT_APP_ROUTE } from "@/lib/licitabien/persona";
 
 interface NavItem {
   href: string;
@@ -22,19 +22,22 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   {
     href: "/auctions",
-    label: "Licitaciones BlindBid",
+    label: "Subastas BlindBid",
     permission: Permissions.AUCTIONS_VIEW,
   },
+];
+
+const ADMIN_ITEMS: NavItem[] = [
   { href: "/admin/users", label: "Usuarios", permission: Permissions.USERS_MANAGE },
 ];
 
-const DEMO_ITEMS: Record<Persona, NavItem[]> = {
-  licitante: [{ href: "/licitabien/licitante", label: "Panel licitante" }],
-  licitador: [
-    { href: "/licitabien/licitador", label: "Panel licitador" },
-    { href: "/licitabien/perfil", label: "Perfil y reputación" },
-  ],
-};
+// Navegación demo estática: ambos paneles + perfil para cualquier usuario con
+// sesión (switch libre, sin derivación de rol).
+const DEMO_ITEMS: NavItem[] = [
+  { href: DEFAULT_APP_ROUTE, label: "Panel licitante" },
+  { href: "/licitabien/licitador", label: "Panel licitador" },
+  { href: "/licitabien/perfil", label: "Perfil y reputación" },
+];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, status, logout } = useAuth();
@@ -62,8 +65,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const items = NAV_ITEMS.filter(
     (item) => !item.permission || can(user, item.permission),
   );
-
-  const demoItems = DEMO_ITEMS[getPersona(user)];
+  const adminItems = ADMIN_ITEMS.filter(
+    (item) => !item.permission || can(user, item.permission),
+  );
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -88,7 +92,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-widest text-muted">
             Demo LICITABIEN
           </p>
-          {demoItems.map((item) => {
+          {DEMO_ITEMS.map((item) => {
             const active =
               pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
@@ -125,6 +129,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
+          {adminItems.length > 0 && (
+            <>
+              <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-widest text-muted">
+                Admin
+              </p>
+              {adminItems.map((item) => {
+                const active =
+                  pathname === item.href || pathname.startsWith(`${item.href}/`);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
+                      active
+                        ? "bg-brand-soft text-brand-dark border-l-2 border-brand"
+                        : "text-navy/70 hover:bg-mist hover:text-ink border-l-2 border-transparent"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </>
+          )}
         </nav>
         <div className="border-t border-border p-4">
           <p className="text-xs text-muted">Protocolo criptográfico</p>

@@ -23,9 +23,11 @@ describe('AdaptersService', () => {
   const actor: AuthUser = {
     id: 'user-1',
     email: 'analista@continental.pe',
+    fullName: 'Analista Factoring Continental',
     role: 'ANALYST',
     permissions: [],
     mustChangePassword: false,
+    totpEnabled: false,
     factorId: 'factor-a',
   };
 

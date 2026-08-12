@@ -1,4 +1,5 @@
 import { apiFetch } from "./api";
+import type { Credential } from "@/lib/licitabien/types";
 import type {
   AdapterPortalStatus,
   AdapterSignResult,
@@ -6,6 +7,7 @@ import type {
   AuctionResponse,
   AuditLogEntry,
   AuditVerdict,
+  AuthUser,
   DashboardOverview,
   Delegation,
   Factor,
@@ -15,7 +17,6 @@ import type {
   InvoiceListItem,
   InvoiceStatus,
   OnChainCommitment,
-  PageResult,
   User,
 } from "./types";
 export const dashboardApi = {
@@ -97,11 +98,23 @@ export const usersApi = {
       method: "PATCH",
       body: { status },
     }),
+  bindWallet: (walletAddress: string) =>
+    apiFetch<AuthUser>(`/api/users/me/wallet`, {
+      method: "POST",
+      body: { walletAddress },
+    }),
 };
+
+export const credentialsApi = {
+  listMine: () => apiFetch<Credential[]>("/api/credentials/me"),
+  getByUid: (uid: string) => apiFetch<Credential>(`/api/credentials/${uid}`),
+  export: (uid: string) => apiFetch<unknown>(`/api/credentials/${uid}/export`),
+};
+
 
 export const auctionsApi = {
   list: (query?: { page?: number; limit?: number }) =>
-    apiFetch<PageResult<Auction>>("/api/auctions", { query }),
+    apiFetch<Auction[]>("/api/auctions", { query }),
   detail: (id: string) => apiFetch<Auction>(`/api/auctions/${id}`),
   bidders: (id: string) => apiFetch<string[]>(`/api/auctions/${id}/bidders`),
   commitment: (id: string, bidder: string) =>
@@ -134,4 +147,16 @@ export const auctionsApi = {
       modelVersion?: string;
     },
   ) => apiFetch<AuditVerdict>(`/api/auctions/${id}/audit-score`, { method: "POST", body }),
+  reveal: (id: string, bidder: string) =>
+    apiFetch<{ txHash: string }>(`/api/auctions/${id}/reveal/${bidder}`, {
+      method: "POST",
+    }),
+  settle: (id: string) =>
+    apiFetch<{ txHash: string }>(`/api/auctions/${id}/settle`, {
+      method: "POST",
+    }),
+  slash: (id: string, bidder: string) =>
+    apiFetch<{ txHash: string }>(`/api/auctions/${id}/slash/${bidder}`, {
+      method: "POST",
+    }),
 };

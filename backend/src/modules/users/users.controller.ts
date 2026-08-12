@@ -87,4 +87,12 @@ export class UsersController {
   ) {
     return this.usersService.updateStatus(id, dto.status, user.id);
   }
+
+  @Post('me/wallet')
+  bindWallet(
+    @Body() dto: { walletAddress: string },
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.usersService.bindWallet(user.id, dto.walletAddress);
+  }
 }

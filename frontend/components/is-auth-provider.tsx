@@ -12,13 +12,20 @@ import {
 import { ApiError } from "@/lib/api";
 import * as authApi from "@/lib/auth";
 import type { AuthUser } from "@/lib/types";
+import type { TwoFaChallenge } from "@/lib/auth";
 
 type SessionStatus = "loading" | "authenticated" | "unauthenticated";
 
 interface AuthContextValue {
   user: AuthUser | null;
   status: SessionStatus;
-  login: (email: string, password: string) => Promise<AuthUser>;
+  /** Devuelve el usuario si el login completa, o el desafío 2FA. */
+  login: (email: string, password: string) => Promise<AuthUser | TwoFaChallenge>;
+  /** Completa el segundo paso 2FA y abre la sesión. */
+  verify2faLogin: (
+    pendingToken: string,
+    code: string,
+  ) => Promise<AuthUser>;
   logout: () => Promise<void>;
   setUser: (user: AuthUser | null) => void;
 }
@@ -47,7 +54,6 @@ export function IsAuthProvider({ children }: { children: ReactNode }) {
             error.code === "SESSION_EXPIRED" ||
             error.code === "SESSION_REVOKED");
         if (!authRequired) {
-          // Error de infraestructura: no bloquear la UI, tratar como sin sesión.
           console.error("Error al verificar la sesión:", error);
         }
         setUser(null);
@@ -59,12 +65,26 @@ export function IsAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    await authApi.login(email, password);
+    const result = await authApi.login(email, password);
+    if ("step" in result && result.step === "verify-2fa") {
+      return result;
+    }
     const me = await authApi.fetchMe();
     setUser(me);
     setStatus("authenticated");
     return me;
   }, []);
+
+  const verify2faLogin = useCallback(
+    async (pendingToken: string, code: string) => {
+      await authApi.verify2fa(pendingToken, code);
+      const me = await authApi.fetchMe();
+      setUser(me);
+      setStatus("authenticated");
+      return me;
+    },
+    [],
+  );
 
   const logout = useCallback(async () => {
     try {
@@ -76,8 +96,8 @@ export function IsAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, status, login, logout, setUser }),
-    [user, status, login, logout],
+    () => ({ user, status, login, verify2faLogin, logout, setUser }),
+    [user, status, login, verify2faLogin, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

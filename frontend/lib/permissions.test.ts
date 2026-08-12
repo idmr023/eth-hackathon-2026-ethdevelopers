@@ -16,15 +16,19 @@ import type { AuthUser } from "./types";
 const admin: AuthUser = {
   id: "u1",
   email: "admin@shield.pe",
+  fullName: "Admin",
   role: "ADMIN",
   permissions: Object.values(Permissions),
   mustChangePassword: false,
+  totpEnabled: false,
   factorId: null,
+  walletAddress: null,
 };
 
 const analyst: AuthUser = {
   id: "u2",
   email: "analyst@shield.pe",
+  fullName: "Analista",
   role: "ANALYST",
   permissions: [
     Permissions.INVOICES_VIEW,
@@ -32,7 +36,9 @@ const analyst: AuthUser = {
     Permissions.ADAPTERS_SIGN,
   ],
   mustChangePassword: true,
+  totpEnabled: false,
   factorId: null,
+  walletAddress: null,
 };
 
 describe("can", () => {

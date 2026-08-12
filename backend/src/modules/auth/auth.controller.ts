@@ -18,6 +18,9 @@ import {
 } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { RegisterDto } from './dto/register.dto';
+import { RecoveryInitDto, RecoveryResetDto } from './dto/recovery.dto';
+import { TwoFaConfirmDto, TwoFaVerifyLoginDto } from './dto/two-fa.dto';
 import { AppError, ErrorCodes } from '../../common/errors';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../../common/decorators/current-user.decorator';
@@ -41,8 +44,47 @@ export class AuthController {
   ) {
     const ip = (req as Request & { ip?: string }).ip ?? 'unknown';
     const result = await this.authService.login(dto.email, dto.password, ip);
+    // Si 2FA está activo, el resultado es un desafío (sin cookies).
+    if (!('accessToken' in result)) {
+      return result;
+    }
     this.setAuthCookies(res, result);
     return { user: result.user };
+  }
+
+  @Public()
+  @Post('login/verify-2fa')
+  @HttpCode(HttpStatus.OK)
+  async verify2fa(
+    @Body() dto: TwoFaVerifyLoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.verify2fa(dto.pendingToken, dto.code);
+    this.setAuthCookies(res, result);
+    return { user: result.user };
+  }
+
+  @Public()
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  async register(@Body() dto: RegisterDto) {
+    const user = await this.authService.register(dto);
+    return { user };
+  }
+
+  @Public()
+  @Post('recovery/init')
+  @HttpCode(HttpStatus.OK)
+  async recoveryInit(@Body() dto: RecoveryInitDto) {
+    return this.authService.recoveryInit(dto.email);
+  }
+
+  @Public()
+  @Post('recovery/reset')
+  @HttpCode(HttpStatus.OK)
+  async recoveryReset(@Body() dto: RecoveryResetDto) {
+    await this.authService.recoveryReset(dto);
+    return { success: true };
   }
 
   @Public()
@@ -83,6 +125,33 @@ export class AuthController {
       dto.currentPassword,
       dto.newPassword,
     );
+    return { success: true };
+  }
+
+  // ── 2FA ────────────────────────────────────────────────────────────
+  @Post('2fa/setup')
+  @HttpCode(HttpStatus.OK)
+  async setup2fa(@CurrentUser() user: AuthUser) {
+    return this.authService.setup2fa(user.id);
+  }
+
+  @Post('2fa/confirm')
+  @HttpCode(HttpStatus.OK)
+  async confirm2fa(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: TwoFaConfirmDto,
+  ) {
+    await this.authService.confirm2fa(user.id, dto.code);
+    return { success: true };
+  }
+
+  @Post('2fa/disable')
+  @HttpCode(HttpStatus.OK)
+  async disable2fa(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: TwoFaConfirmDto,
+  ) {
+    await this.authService.disable2fa(user.id, dto.code);
     return { success: true };
   }
 

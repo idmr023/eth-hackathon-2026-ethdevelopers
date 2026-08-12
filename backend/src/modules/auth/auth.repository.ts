@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, Session, User } from '@prisma/client';
+import { Prisma, Session, User, UserRole } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma.service';
 
 export interface SessionRecord {
@@ -30,6 +30,13 @@ export class AuthRepository {
 
   async findUserById(id: string): Promise<User | null> {
     return this.prisma.user.findUnique({ where: { id } });
+  }
+
+  async findUserByDni(dni: string): Promise<Pick<User, 'id'> | null> {
+    return this.prisma.user.findFirst({
+      where: { dni },
+      select: { id: true },
+    });
   }
 
   async createSession(data: {
@@ -112,5 +119,36 @@ export class AuthRepository {
       where: { id: userId },
       data: { passwordHash, mustChangePassword: false },
     });
+  }
+
+  async createUser(data: {
+    email: string;
+    fullName: string;
+    passwordHash: string;
+    phone?: string | null;
+    dni?: string | null;
+    recoveryQuestion: string;
+    recoveryAnswerHash: string;
+  }): Promise<User> {
+    return this.prisma.user.create({
+      data: {
+        email: data.email,
+        fullName: data.fullName,
+        passwordHash: data.passwordHash,
+        role: UserRole.ANALYST,
+        mustChangePassword: false,
+        phone: data.phone ?? null,
+        dni: data.dni ?? null,
+        recoveryQuestion: data.recoveryQuestion,
+        recoveryAnswerHash: data.recoveryAnswerHash,
+      },
+    });
+  }
+
+  async updateUser(
+    userId: string,
+    data: Prisma.UserUpdateInput,
+  ): Promise<User> {
+    return this.prisma.user.update({ where: { id: userId }, data });
   }
 }

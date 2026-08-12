@@ -1,6 +1,7 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -8,9 +9,15 @@ import { AppModule } from './app.module';
 import { allowedOrigins } from './shared/config';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, { bufferLogs: false });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: false,
+  });
   const config = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
+
+  // Deshabilita ETag/304 para que las GETs nunca lleguen "Not Modified" al
+  // navegador (el cliente API usa cache: no-store en el frontend).
+  app.set('etag', false);
 
   app.setGlobalPrefix('api');
 

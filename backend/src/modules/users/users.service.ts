@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, User, UserRole, UserStatus } from '@prisma/client';
 import { hash } from 'bcryptjs';
+import { isAddress } from 'viem';
 import { PrismaService } from '../../shared/prisma.service';
 import { safePage, safeLimit } from '../../common/dto/pagination.dto';
 import { AppError, ErrorCodes } from '../../common/errors';
@@ -73,6 +74,7 @@ export class UsersService {
   constructor(
     private readonly repository: UsersRepository,
     private readonly audit: AuditService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async list(page?: number, limit?: number, q?: string) {
@@ -146,5 +148,38 @@ export class UsersService {
       newData: { status },
     });
     return updated;
+  }
+
+  async bindWallet(userId: string, walletAddress: string): Promise<User> {
+    if (!isAddress(walletAddress)) {
+      throw new AppError(
+        ErrorCodes.VALIDATION_ERROR,
+        400,
+        'Dirección de wallet inválida',
+      );
+    }
+    const existingUserWithWallet = await this.prisma.user.findFirst({
+      where: { walletAddress: walletAddress.toLowerCase() },
+    });
+    if (existingUserWithWallet && existingUserWithWallet.id !== userId) {
+      throw new AppError(
+        ErrorCodes.CONFLICT,
+        409,
+        'Esta wallet ya está vinculada a otra cuenta',
+      );
+    }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: { walletAddress: walletAddress.toLowerCase() },
+    });
+    await this.audit.record({
+      tableName: 'users',
+      recordId: userId,
+      operation: 'UPDATE',
+      actorUserId: userId,
+      newData: { walletAddress: walletAddress.toLowerCase() },
+    });
+    return updatedUser;
   }
 }

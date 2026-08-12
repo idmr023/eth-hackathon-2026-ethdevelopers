@@ -1,10 +1,18 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { CredentialCard, ReputationHeader } from "./is-credential-card";
 import { IconBadgeCheck, IconSparkles } from "./icons";
-import { credentials } from "@/lib/licitabien/mock-data";
+import { credentialsApi } from "@/lib/endpoints";
 
 export function ReputationView() {
+  const { data: result, isLoading } = useQuery({
+    queryKey: ["myCredentials"],
+    queryFn: () => credentialsApi.listMine(),
+  });
+
+  const credentials = result?.data ?? [];
+
   return (
     <main className="space-y-8">
       <div>
@@ -14,9 +22,6 @@ export function ReputationView() {
         <h1 className="mt-1 font-display text-2xl font-bold tracking-tight text-ink">
           Perfil de empresa y reputación
         </h1>
-        <p className="mt-1 text-sm text-muted">
-          Proveedor H S.A.C. · RUC 20123456789
-        </p>
       </div>
 
       <ReputationHeader />
@@ -31,11 +36,17 @@ export function ReputationView() {
             {credentials.length} credenciales
           </span>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {credentials.map((credential) => (
-            <CredentialCard key={credential.id} credential={credential} />
-          ))}
-        </div>
+        {isLoading ? (
+            <p>Cargando credenciales...</p>
+        ) : credentials.length === 0 ? (
+            <p className="text-muted text-sm">No tienes credenciales on-chain todavía. Participa en una subasta y gana un contrato para recibir tu primera insignia.</p>
+        ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {credentials.map((credential) => (
+                <CredentialCard key={credential.id} credential={credential} />
+            ))}
+            </div>
+        )}
       </section>
 
       <section className="rounded-xl border border-brand/30 bg-brand-soft p-6">

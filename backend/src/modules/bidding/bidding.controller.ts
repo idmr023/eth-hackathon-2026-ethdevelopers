@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { Auction, Delegation, AuditVerdict } from '@prisma/client';
+import { Public } from '../../common/decorators/rbac.decorators';
 import { BiddingService, OnChainCommitment } from './bidding.service';
 import { CreateAuctionDto } from './dto/create-auction.dto';
 import { DelegateRevealDto } from './dto/create-auction.dto';
@@ -34,6 +35,7 @@ export class BiddingController {
     };
   }
 
+  @Public()
   @Get()
   @ApiOperation({ summary: 'List all mirrored auctions (syncs active ones)' })
   @ApiResponse({ status: 200, description: 'List of auctions' })
@@ -115,6 +117,36 @@ export class BiddingController {
       dto.summaryUri,
       dto.modelVersion,
     );
+  }
+
+  @Post(':id/reveal/:bidder')
+  @ApiOperation({
+    summary: 'Auto-reveal a bid on-chain using the delegated secret',
+  })
+  async reveal(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('bidder') bidder: string,
+  ): Promise<{ txHash: string }> {
+    return this.bidding.autoReveal(BigInt(id), bidder as `0x${string}`);
+  }
+
+  @Post(':id/settle')
+  @ApiOperation({ summary: 'Settle auction on-chain (permissionless)' })
+  async settle(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<{ txHash: string }> {
+    return this.bidding.settleAuctionOnChain(BigInt(id));
+  }
+
+  @Post(':id/slash/:bidder')
+  @ApiOperation({
+    summary: 'Slash a non-revealing bidder on-chain (permissionless)',
+  })
+  async slash(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('bidder') bidder: string,
+  ): Promise<{ txHash: string }> {
+    return this.bidding.slashBidOnChain(BigInt(id), bidder as `0x${string}`);
   }
 
   private serializeAuction(auction: Auction): Record<string, unknown> {

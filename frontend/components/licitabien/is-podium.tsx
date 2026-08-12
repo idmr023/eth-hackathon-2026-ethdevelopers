@@ -4,7 +4,7 @@ import type { PodiumEntry } from "@/lib/licitabien/types";
 import { formatSoles } from "@/lib/licitabien/format";
 import { arbiscanAddressUrl } from "@/lib/licitabien/chain";
 import { useChainId } from "wagmi";
-import { IconExternal, IconTrophy } from "./icons";
+import { IconExternal, IconSparkles, IconTrophy } from "./icons";
 
 const MEDALS: Record<PodiumEntry["rank"], { label: string; chip: string }> = {
   1: { label: "Ganador", chip: "bg-amber-400 text-amber-950 border-amber-500/40" },
@@ -46,6 +46,12 @@ export function Podium({
               <p className="mt-0.5 text-sm text-muted">
                 Monto revelado · {formatSoles(winner.amount)}
               </p>
+              {winner.finalScore != null && (
+                <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-brand/30 bg-brand-soft px-2.5 py-0.5 text-[11px] font-bold text-brand-dark">
+                  <IconSparkles className="size-3" />
+                  Score compuesto {winner.finalScore}/100
+                </span>
+              )}
             </div>
             <div className="text-right">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
@@ -60,7 +66,12 @@ export function Podium({
             </div>
           </div>
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-black/5 pt-4">
-            <div>
+            <div className="min-w-0">
+              {winner.winnerReason && (
+                <p className="mb-1 text-xs text-muted">
+                  {winner.winnerReason}
+                </p>
+              )}
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
                 Hash de la oferta ganadora
               </p>
@@ -96,6 +107,12 @@ export function Podium({
             <div className="flex items-center gap-4 font-mono text-xs text-muted">
               <span className="tabular-nums">{formatSoles(entry.amount)}</span>
               <span className="text-brand-dark">−{entry.savings}%</span>
+              {entry.finalScore != null && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-brand/30 bg-brand-soft px-2 py-0.5 text-[10px] font-semibold text-brand-dark">
+                  <IconSparkles className="size-3" />
+                  {entry.finalScore}
+                </span>
+              )}
             </div>
           </li>
         ))}

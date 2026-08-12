@@ -9,11 +9,15 @@ function subscribeNow(onChange: () => void): () => void {
 }
 
 function getNowSnapshot(): number {
-  return Date.now();
+  return Math.floor(Date.now() / 1000);
+}
+
+function getServerSnapshot(): number {
+  return 0;
 }
 
 export function useCountdown(target: string | number | null): CountdownParts {
-  const now = useSyncExternalStore(subscribeNow, getNowSnapshot, getNowSnapshot);
+  const now = useSyncExternalStore(subscribeNow, getNowSnapshot, getServerSnapshot);
   const targetMs = target ? new Date(target).getTime() : null;
 
   if (targetMs === null) {
@@ -27,5 +31,5 @@ export function useCountdown(target: string | number | null): CountdownParts {
     };
   }
 
-  return toCountdownParts(targetMs - now);
+  return toCountdownParts(targetMs - now * 1000);
 }

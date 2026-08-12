@@ -8,6 +8,7 @@ import { AuthService, PASSWORD_HASH_ROUNDS } from './auth.service';
 import { AuthRepository } from './auth.repository';
 import { ErrorCodes } from '../../common/errors';
 import { AuditService } from '../../shared/audit.service';
+import { generateTotp, generateTotpSecret } from './totp';
 
 const sha256 = (value: string): string =>
   createHash('sha256').update(value).digest('hex');
@@ -23,7 +24,14 @@ const baseUser = {
   role: 'ADMIN',
   status: UserStatus.ACTIVE,
   mustChangePassword: false,
+  phone: null,
+  dni: null,
+  recoveryQuestion: null,
+  recoveryAnswerHash: null,
+  totpSecret: null,
+  totpEnabled: false,
   factorId: null,
+  walletAddress: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 } satisfies User;
@@ -33,14 +41,17 @@ describe('AuthService', () => {
   const repository = {
     countRecentFailedAttempts: jest.fn(),
     findByEmail: jest.fn(),
+    findUserByDni: jest.fn(),
+    findUserById: jest.fn(),
     recordLoginAttempt: jest.fn(),
     clearFailedAttempts: jest.fn(),
     createSession: jest.fn(),
     findSessionById: jest.fn(),
-    findUserById: jest.fn(),
     revokeSession: jest.fn(),
     revokeAllUserSessions: jest.fn(),
     updatePassword: jest.fn(),
+    createUser: jest.fn(),
+    updateUser: jest.fn(),
   };
   const audit = { record: jest.fn() };
   const jwt = {
@@ -137,6 +148,10 @@ describe('AuthService', () => {
         '1.1.1.1',
       );
 
+      // totpEnabled:false → LoginResult (no desafío 2FA).
+      if (!('accessToken' in result)) {
+        throw new Error('Se esperaba un LoginResult, no un desafío 2FA');
+      }
       expect(result.accessToken).toBe('token');
       expect(result.refreshToken).toBe('token');
       expect(result.user.email).toBe('admin@invoiceshield.dev');
@@ -260,6 +275,189 @@ describe('AuthService', () => {
         expect.not.stringMatching(/^OldPass1$/),
       );
       expect(repository.revokeAllUserSessions).toHaveBeenCalledWith('user-1');
+    });
+  });
+
+  describe('register', () => {
+    it('crea un usuario ANALYST con mustChangePassword false', async () => {
+      repository.findByEmail.mockResolvedValue(null);
+      repository.findUserByDni.mockResolvedValue(null);
+      repository.createUser.mockResolvedValue({
+        ...baseUser,
+        role: 'ANALYST',
+      });
+
+      const view = await service.register({
+        email: 'nuevo@empresa.pe',
+        fullName: 'Empresa Nueva',
+        password: 'Empresa123',
+        dni: '12345678',
+        recoveryQuestion: '¿Mascota?',
+        recoveryAnswer: 'Firulais',
+      });
+
+      expect(view.role).toBe('ANALYST');
+      expect(view.totpEnabled).toBe(false);
+      expect(repository.createUser).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: 'nuevo@empresa.pe',
+          dni: '12345678',
+        }),
+      );
+    });
+
+    it('rechaza email duplicado con CONFLICT', async () => {
+      repository.findByEmail.mockResolvedValue(baseUser);
+      await expect(
+        service.register({
+          email: 'admin@invoiceshield.dev',
+          fullName: 'Dup',
+          password: 'Empresa123',
+          recoveryQuestion: 'q',
+          recoveryAnswer: 'a',
+        }),
+      ).rejects.toMatchObject({ code: ErrorCodes.CONFLICT });
+      expect(repository.createUser).not.toHaveBeenCalled();
+    });
+
+    it('rechaza DNI duplicado con CONFLICT', async () => {
+      repository.findByEmail.mockResolvedValue(null);
+      repository.findUserByDni.mockResolvedValue({ id: 'otro' });
+      await expect(
+        service.register({
+          email: 'nuevo@empresa.pe',
+          fullName: 'Dup',
+          password: 'Empresa123',
+          dni: '12345678',
+          recoveryQuestion: 'q',
+          recoveryAnswer: 'a',
+        }),
+      ).rejects.toMatchObject({ code: ErrorCodes.CONFLICT });
+    });
+  });
+
+  describe('recovery', () => {
+    it('recoveryInit devuelve la pregunta del usuario', async () => {
+      repository.findByEmail.mockResolvedValue({
+        ...baseUser,
+        recoveryQuestion: '¿Color favorito?',
+      });
+      const res = await service.recoveryInit('admin@invoiceshield.dev');
+      expect(res.question).toBe('¿Color favorito?');
+    });
+
+    it('recoveryInit devuelve placeholder genérico si no existe', async () => {
+      repository.findByEmail.mockResolvedValue(null);
+      const res = await service.recoveryInit('nadie@x.pe');
+      expect(res.question.length).toBeGreaterThan(0);
+    });
+
+    it('recoveryReset actualiza la contraseña y revoca sesiones', async () => {
+      repository.findByEmail.mockResolvedValue({
+        ...baseUser,
+        recoveryAnswerHash: await hash('firulais', PASSWORD_HASH_ROUNDS),
+      });
+      repository.updatePassword.mockResolvedValue(undefined);
+      repository.revokeAllUserSessions.mockResolvedValue({ count: 1 });
+
+      await service.recoveryReset({
+        email: 'admin@invoiceshield.dev',
+        answer: 'Firulais',
+        newPassword: 'Nuevo123',
+      });
+
+      expect(repository.updatePassword).toHaveBeenCalledWith(
+        'user-1',
+        expect.any(String),
+      );
+      expect(repository.revokeAllUserSessions).toHaveBeenCalledWith('user-1');
+    });
+
+    it('recoveryReset rechaza respuesta incorrecta', async () => {
+      repository.findByEmail.mockResolvedValue({
+        ...baseUser,
+        recoveryAnswerHash: await hash('firulais', PASSWORD_HASH_ROUNDS),
+      });
+      await expect(
+        service.recoveryReset({
+          email: 'admin@invoiceshield.dev',
+          answer: 'incorrecto',
+          newPassword: 'Nuevo123',
+        }),
+      ).rejects.toMatchObject({ code: ErrorCodes.INVALID_CREDENTIALS });
+    });
+  });
+
+  describe('2FA', () => {
+    it('setup2fa genera secreto y URI otpauth', async () => {
+      repository.findUserById.mockResolvedValue(baseUser);
+      repository.updateUser.mockResolvedValue(baseUser);
+      const res = await service.setup2fa('user-1');
+      expect(res.secret.length).toBeGreaterThan(0);
+      expect(res.otpauthUri.startsWith('otpauth://totp/')).toBe(true);
+      expect(repository.updateUser).toHaveBeenCalledWith(
+        'user-1',
+        expect.objectContaining({ totpSecret: expect.any(String) }),
+      );
+    });
+
+    it('login con totpEnabled devuelve desafío verify-2fa (sin sesión)', async () => {
+      const user = {
+        ...baseUser,
+        totpEnabled: true,
+        totpSecret: 'JBSWY3DPEHPK3PXP',
+        passwordHash: await hash('Correct1', PASSWORD_HASH_ROUNDS),
+      };
+      repository.countRecentFailedAttempts.mockResolvedValue(0);
+      repository.findByEmail.mockResolvedValue(user);
+      jwt.signAsync.mockResolvedValue('pending-token');
+
+      const result = await service.login(
+        'admin@invoiceshield.dev',
+        'Correct1',
+        '1.1.1.1',
+      );
+
+      if ('accessToken' in result) {
+        throw new Error('Se esperaba desafío 2FA');
+      }
+      expect(result.step).toBe('verify-2fa');
+      expect(result.pendingToken).toBe('pending-token');
+      expect(repository.createSession).not.toHaveBeenCalled();
+    });
+
+    it('confirm2fa con código correcto activa 2FA', async () => {
+      const secret = generateTotpSecret();
+      const code = generateTotp(secret);
+      repository.findUserById.mockResolvedValue({
+        ...baseUser,
+        totpSecret: secret,
+      });
+      repository.updateUser.mockResolvedValue(baseUser);
+
+      await service.confirm2fa('user-1', code);
+
+      expect(repository.updateUser).toHaveBeenCalledWith('user-1', {
+        totpEnabled: true,
+      });
+    });
+
+    it('disable2fa con código correcto desactiva y limpia el secreto', async () => {
+      const secret = generateTotpSecret();
+      const code = generateTotp(secret);
+      repository.findUserById.mockResolvedValue({
+        ...baseUser,
+        totpEnabled: true,
+        totpSecret: secret,
+      });
+      repository.updateUser.mockResolvedValue(baseUser);
+
+      await service.disable2fa('user-1', code);
+
+      expect(repository.updateUser).toHaveBeenCalledWith('user-1', {
+        totpEnabled: false,
+        totpSecret: null,
+      });
     });
   });
 });

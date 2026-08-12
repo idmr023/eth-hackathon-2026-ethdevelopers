@@ -105,6 +105,18 @@ export function useAuditScore(auctionId: bigint, bidder: `0x${string}`) {
   });
 }
 
+// hasCommitted(auctionId, bidder) → bool
+export function useHasCommitted(auctionId: bigint, bidder: `0x${string}`) {
+  const address = useBlindBidVaultAddress();
+  return useReadContract({
+    address: address as `0x${string}`,
+    abi: blindBidVaultAbi,
+    functionName: 'hasCommitted',
+    args: [auctionId, bidder],
+    query: { enabled: !!address && auctionId > 0n && bidder !== '0x' },
+  });
+}
+
 // Write hooks
 export function useCreateAuction() {
   const address = useBlindBidVaultAddress();
@@ -283,6 +295,78 @@ export function useSlashBid() {
 
   return {
     slashBid,
+    hash,
+    isPending,
+    isConfirming,
+    isConfirmed,
+    error,
+    reset,
+  };
+}
+
+// cancelAuction(auctionId) — solo el organizer.
+export function useCancelAuction() {
+  const address = useBlindBidVaultAddress();
+  const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
+
+  const cancelAuction = (auctionId: bigint) => {
+    if (!address) throw new Error('Contract not deployed on this network');
+    writeContract({
+      address: address as `0x${string}`,
+      abi: blindBidVaultAbi,
+      functionName: 'cancelAuction',
+      args: [auctionId],
+    });
+  };
+
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash,
+  });
+
+  return {
+    cancelAuction,
+    hash,
+    isPending,
+    isConfirming,
+    isConfirmed,
+    error,
+    reset,
+  };
+}
+
+// setAuditScore(auctionId, bidder, aiScore, docHash, summaryUri) — solo AUDITOR_ROLE.
+export function useSetAuditScore() {
+  const address = useBlindBidVaultAddress();
+  const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
+
+  const setAuditScore = (params: {
+    auctionId: bigint;
+    bidder: `0x${string}`;
+    aiScore: bigint;
+    docHash: `0x${string}`;
+    summaryUri: string;
+  }) => {
+    if (!address) throw new Error('Contract not deployed on this network');
+    writeContract({
+      address: address as `0x${string}`,
+      abi: blindBidVaultAbi,
+      functionName: 'setAuditScore',
+      args: [
+        params.auctionId,
+        params.bidder,
+        params.aiScore,
+        params.docHash,
+        params.summaryUri,
+      ],
+    });
+  };
+
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash,
+  });
+
+  return {
+    setAuditScore,
     hash,
     isPending,
     isConfirming,

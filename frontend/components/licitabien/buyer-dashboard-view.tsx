@@ -59,6 +59,11 @@ export function BuyerDashboardView() {
     Math.max(1, mine.filter((l) => l.providers.length > 0).length)
   ).toFixed(1);
 
+  const closedMine = mine.filter((l) => l.phase === "CLOSED" && l.winningAmount);
+  const totalBudget = closedMine.reduce((acc, l) => acc + l.budget, 0);
+  const totalWinning = closedMine.reduce((acc, l) => acc + (l.winningAmount ?? 0), 0);
+  const avgSavings = totalBudget > 0 ? Math.round(((totalBudget - totalWinning) / totalBudget) * 100) : 0;
+
   return (
     <main className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -70,7 +75,7 @@ export function BuyerDashboardView() {
             Mis licitaciones
           </h1>
           <p className="mt-1 text-sm text-muted">
-            {user?.email ?? "Acme Corp S.A. · RUC 20555443321"}
+            {user?.email ?? "Acme Corp S.A."}
           </p>
         </div>
         <button
@@ -86,7 +91,7 @@ export function BuyerDashboardView() {
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           label="Total publicadas"
-          value="12"
+          value={mine.length}
           sub="este año"
           icon={<IconCheck className="size-4" />}
         />
@@ -105,8 +110,8 @@ export function BuyerDashboardView() {
         />
         <KpiCard
           label="Ahorro estimado"
-          value="18%"
-          sub="vs. precio de referencia"
+          value={`${avgSavings}%`}
+          sub="vs. presupuesto de referencia"
           accent="text-brand-dark"
           icon={<IconTrendingDown className="size-4" />}
         />

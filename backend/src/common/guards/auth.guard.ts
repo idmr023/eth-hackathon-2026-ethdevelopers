@@ -19,10 +19,13 @@ const MUST_CHANGE_ALLOWLIST = [
 export interface AccessTokenPayload {
   sub: string;
   email: string;
+  fullName: string;
   role: string;
   permissions: string[];
   mustChangePassword: boolean;
+  totpEnabled: boolean;
   factorId: string | null;
+  walletAddress: string | null;
 }
 
 @Injectable()
@@ -79,10 +82,13 @@ export class AuthGuard implements CanActivate {
     const user: AuthUser = {
       id: payload.sub,
       email: payload.email,
+      fullName: payload.fullName,
       role: payload.role,
       permissions: payload.permissions ?? RolePermissions.ANALYST.slice(),
       mustChangePassword: payload.mustChangePassword,
+      totpEnabled: payload.totpEnabled ?? false,
       factorId: payload.factorId ?? null,
+      walletAddress: payload.walletAddress ?? null,
     };
     request.user = user;
     return true;

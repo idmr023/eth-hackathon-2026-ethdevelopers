@@ -70,8 +70,15 @@ model User {
   role               UserRole     @default(ANALYST)
   status             UserStatus   @default(ACTIVE)
   mustChangePassword Boolean      @default(false)
+  phone              String?
+  dni                String?      @unique
+  recoveryQuestion   String?
+  recoveryAnswerHash String?
+  totpSecret         String?
+  totpEnabled        Boolean      @default(false)
   factorId           String?
   factor             Factor?      @relation(fields: [factorId], references: [id])
+  walletAddress      String?      @unique @db.VarChar(42)
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
   sessions           Session[]
@@ -286,6 +293,26 @@ model AuditLogBC {
   @@index([action])
   @@index([createdAt])
   @@map("audit_log")
+}
+
+// ── Models: Credentials (EAS on-chain attestations mirror) ─────────
+model Credential {
+  id              String   @id @default(cuid())
+  uid             String   @unique
+  schemaUid       String   @map("schema_uid") @db.VarChar(66)
+  recipientWallet String   @map("recipient_wallet") @db.VarChar(42)
+  attester        String   @db.VarChar(42)
+  auctionId       String   @map("auction_id")
+  title           String   @db.VarChar(255)
+  description     String?  @db.VarChar(2000)
+  issuer          String   @db.VarChar(255)
+  badge           String   @db.VarChar(100)
+  awardedAt       DateTime @default(now()) @map("awarded_at")
+  txHash          String?  @map("tx_hash") @db.VarChar(66)
+
+  @@index([recipientWallet])
+  @@index([auctionId])
+  @@map("credential")
 }
 
 // ── Models: Licitabien (licitaciones de sobre cerrado, demo cripto-invisible) ──

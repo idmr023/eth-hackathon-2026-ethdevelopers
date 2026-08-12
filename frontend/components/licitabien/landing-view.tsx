@@ -1,17 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/is-auth-provider";
-import { Button } from "@/components/ui/button";
 import { CountdownRow } from "./is-countdown-row";
 import { LockNote } from "./is-lock-note";
 import { ChainBadge } from "./is-chain-badge";
 import { Logo } from "./licitabien-nav";
-import { licitaciones } from "@/lib/licitabien/mock-data";
+import { useLicitaciones } from "@/lib/licitabien/use-licitaciones";
 import { arbiscanAddressUrl } from "@/lib/licitabien/chain";
-import { getPersonaRoute } from "@/lib/licitabien/persona";
+import { useLiveAuction } from "@/lib/licitabien/chain";
+import { DEFAULT_APP_ROUTE } from "@/lib/licitabien/persona";
 import { useChainId } from "wagmi";
 import {
   IconChain,
@@ -19,12 +19,6 @@ import {
   IconLock,
   IconSparkles,
 } from "./icons";
-
-const METRICS = [
-  { value: "1,240+", label: "Licitaciones publicadas" },
-  { value: "8,900+", label: "Proveedores activos" },
-  { value: "100%", label: "Ofertas verificables" },
-];
 
 const PRIVACY_CARDS = [
   {
@@ -44,69 +38,103 @@ const PRIVACY_CARDS = [
   },
 ];
 
-function RegisterModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-2xl border border-border bg-white p-8 text-center shadow-2xl">
-        <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-brand-soft text-brand-dark">
-          <IconSparkles className="size-6" />
-        </span>
-        <h3 className="mt-4 font-display text-lg font-bold text-ink">
-          Registro en preparación
-        </h3>
-        <p className="mt-2 text-sm leading-relaxed text-muted">
-          Pronto podrás crear tu cuenta de empresa. Este botón quedó preparado
-          para conectarse a la base de datos de usuarios.
-        </p>
-        <Button
-          className="mt-6 w-full bg-brand text-white hover:bg-brand-dark"
-          onClick={onClose}
-        >
-          Entendido
-        </Button>
-      </div>
-    </div>
-  );
-}
+type HeroSource = {
+  id: string;
+  title: string;
+  subtitle: string;
+  commitEnd: string;
+  bidders: { id: string; label: string }[];
+};
 
 function HeroAuctionCard() {
   const chainId = useChainId();
-  const demo = licitaciones[0];
+  const { licitaciones } = useLicitaciones();
+  const liveAuction = useLiveAuction();
+
+  const activeLicitacion = useMemo(() => {
+    return licitaciones.find((l) => l.phase === "OPEN" || l.phase === "REVEALING");
+  }, [licitaciones]);
+
+  const fallbackCommitEnd = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 3);
+    return d.toISOString();
+  }, []);
+
+  const source: HeroSource = useMemo(() => {
+    if (liveAuction && liveAuction.status === "ACTIVE") {
+      return {
+        id: `#${liveAuction.auctionId}`,
+        title: liveAuction.title,
+        subtitle: liveAuction.organizerAddress,
+        commitEnd: liveAuction.commitEnd,
+        bidders: [],
+      };
+    }
+    if (activeLicitacion) {
+      return {
+        id: activeLicitacion.id,
+        title: activeLicitacion.title,
+        subtitle: activeLicitacion.description ?? "",
+        commitEnd: activeLicitacion.phase === "REVEALING" ? activeLicitacion.revealEnd : activeLicitacion.commitEnd,
+        bidders: activeLicitacion.providers.slice(0, 3).map((p) => ({
+          id: p.id,
+          label: p.name,
+        })),
+      };
+    }
+    return {
+      id: "LIC-2026-001",
+      title: "Suministro de materiales de oficina Q3 2026",
+      subtitle: "Licitación activa con ofertas selladas",
+      commitEnd: fallbackCommitEnd,
+      bidders: [],
+    };
+  }, [liveAuction, activeLicitacion, fallbackCommitEnd]);
 
   return (
     <div className="rounded-2xl border border-border bg-white p-6 shadow-2xl">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="inline-flex items-center gap-2 rounded-full bg-navy px-3 py-1 text-[11px] font-semibold tracking-wide text-white">
           <span className="anim-pulse-dot size-1.5 rounded-full bg-brand" />
-          LICITACIÓN ACTIVA · FASE SELLADA
+          {liveAuction && liveAuction.status === "ACTIVE"
+            ? `SUBASTA ON-CHAIN #${liveAuction.auctionId}`
+            : "LICITACIÓN ACTIVA · FASE SELLADA"}
         </span>
-        <span className="text-xs text-muted">{demo.id}</span>
+        <span className="text-xs text-muted">{source.id}</span>
       </div>
 
       <h3 className="mt-4 font-display text-xl font-bold leading-snug text-ink">
-        {demo.title}
+        {source.title}
       </h3>
+      {liveAuction && liveAuction.status === "ACTIVE" && (
+        <p className="mt-1 font-mono text-[11px] text-muted">
+          {source.subtitle}
+        </p>
+      )}
 
       <div className="mt-4">
-        <CountdownRow target={demo.commitEnd} label="Cierre de compromisos" />
+        <CountdownRow target={source.commitEnd} label="Cierre de compromisos" />
       </div>
 
       <ul className="mt-5 space-y-2">
-        {demo.providers.slice(0, 3).map((provider) => (
-          <li
-            key={provider.id}
-            className="flex items-center justify-between gap-3 rounded-lg border border-border bg-mist px-3 py-2.5"
-          >
-            <span className="flex items-center gap-2 text-sm font-medium text-ink">
-              <IconCheck className="size-4 text-brand-dark" />
-              {provider.name}
-            </span>
-            <span className="font-mono text-[11px] text-muted">
-              {provider.commitmentHash}
-            </span>
+        {source.bidders.length > 0 ? (
+          source.bidders.map((provider) => (
+            <li
+              key={provider.id}
+              className="flex items-center justify-between gap-3 rounded-lg border border-border bg-mist px-3 py-2.5"
+            >
+              <span className="flex items-center gap-2 text-sm font-medium text-ink">
+                <IconCheck className="size-4 text-brand-dark" />
+                {provider.label}
+              </span>
+            </li>
+          ))
+        ) : (
+          <li className="rounded-lg border border-border bg-mist px-3 py-2.5 text-xs text-muted">
+            Compromisos sellados en arbitrum…
           </li>
-        ))}
+        )}
       </ul>
 
       <div className="mt-4">
@@ -133,14 +161,39 @@ function HeroAuctionCard() {
 }
 
 export function LandingView() {
-  const [registerOpen, setRegisterOpen] = useState(false);
   const { user } = useAuth();
   const router = useRouter();
+  const { licitaciones } = useLicitaciones();
+
+  const metrics = useMemo(() => {
+    const totalLicitaciones = licitaciones.length;
+    const totalProveedores = new Set(
+      licitaciones.flatMap((l) => l.providers.map((p) => p.name))
+    ).size;
+    const closedWithWinner = licitaciones.filter(
+      (l) => l.phase === "CLOSED" && l.winningAmount
+    );
+    const totalBudget = closedWithWinner.reduce((acc, l) => acc + l.budget, 0);
+    const totalWinning = closedWithWinner.reduce(
+      (acc, l) => acc + (l.winningAmount ?? 0),
+      0
+    );
+    const savingsPct =
+      totalBudget > 0
+        ? Math.round(((totalBudget - totalWinning) / totalBudget) * 100)
+        : 0;
+
+    return [
+      { value: `${totalLicitaciones}`, label: "Licitaciones publicadas" },
+      { value: `${totalProveedores}`, label: "Proveedores activos" },
+      { value: `${savingsPct}%`, label: "Ahorro promedio" },
+    ];
+  }, [licitaciones]);
 
   const goToDashboard = useCallback(() => {
     router.push(
       user
-        ? getPersonaRoute(user)
+        ? DEFAULT_APP_ROUTE
         : "/login?from=/licitabien/licitante",
     );
   }, [user, router]);
@@ -166,13 +219,14 @@ export function LandingView() {
                 Iniciar sesión
               </Link>
             )}
-            <button
-              type="button"
-              onClick={() => setRegisterOpen(true)}
-              className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
-            >
-              Registrarse
-            </button>
+            {user ? null : (
+              <Link
+                href="/register"
+                className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
+              >
+                Registrarse
+              </Link>
+            )}
           </div>
         </div>
       </header>
@@ -212,7 +266,7 @@ export function LandingView() {
                 </a>
               </div>
               <dl className="mt-10 grid max-w-xl grid-cols-3 gap-6 border-t border-border pt-8">
-                {METRICS.map((metric) => (
+                {metrics.map((metric) => (
                   <div key={metric.label}>
                     <dt className="order-2 mt-1 text-xs text-muted">
                       {metric.label}
@@ -286,8 +340,6 @@ export function LandingView() {
           </p>
         </div>
       </footer>
-
-      <RegisterModal open={registerOpen} onClose={() => setRegisterOpen(false)} />
     </div>
   );
 }

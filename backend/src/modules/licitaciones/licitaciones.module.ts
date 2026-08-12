@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
 import { SharedModule } from '../../shared/shared.module';
+import { ProposalsModule } from '../proposals/proposals.module';
 import { LicitacionesController } from './licitaciones.controller';
 import { LicitacionesService } from './licitaciones.service';
 
 @Module({
-  imports: [SharedModule],
+  imports: [SharedModule, ProposalsModule],
   controllers: [LicitacionesController],
   providers: [LicitacionesService],
   exports: [LicitacionesService],

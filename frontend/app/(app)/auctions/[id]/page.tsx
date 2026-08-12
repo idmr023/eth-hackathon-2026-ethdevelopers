@@ -1,18 +1,23 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { useAccount } from 'wagmi';
-import { keccak256, encodePacked, parseUnits } from 'viem';
+import { useAccount, useChainId } from 'wagmi';
+import { parseUnits } from 'viem';
 import {
   useCommitment,
   useCommitBid,
   useRevealBid,
   useClaimRefund,
   useSettleAuction,
+  useBlindBidVaultAddress,
 } from '@/lib/web3/hooks/useBlindBidVault';
+import { useAllowance, useApproveToken } from '@/lib/web3/hooks/useToken';
+import { getContractAddress } from '@/lib/web3/contracts/addresses';
+import { generateCommitHash } from '@/lib/web3/commitment';
+import { saveBidSecret, getBidSecret, clearBidSecret } from '@/lib/web3/bid-storage';
 import { auctionsApi } from '@/lib/endpoints';
 import { ApiError } from '@/lib/api';
 import { Card, PageHeader, EmptyState } from '@/components/ui/card';
@@ -87,24 +92,40 @@ export default function AuctionDetailPage() {
   const refundHook = useClaimRefund();
   const settleHook = useSettleAuction();
 
+  const chainId = useChainId();
+  const vaultAddress = (useBlindBidVaultAddress() ?? '0x') as `0x${string}`;
+  const usdcAddress = (getContractAddress(chainId, 'USDC') ?? '0x') as `0x${string}`;
+  const allowance = useAllowance(usdcAddress, address, vaultAddress);
+  const approveHook = useApproveToken(usdcAddress);
+
   const isActive = auction?.status === AuctionStatus.ACTIVE;
+
+  const stake = auction?.stakeAmount ? parseUnits(auction.stakeAmount, TOKEN_DECIMALS) : 0n;
+  const allowanceValue = (allowance.data as bigint | undefined) ?? 0n;
+  const needsApprove = allowanceValue < stake;
+  const approveBusy = allowance.isLoading || approveHook.isPending || approveHook.isConfirming;
+
+  const [commitData, setCommitData] = useState({ price: '', secret: '' });
 
   const handleCommit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
     if (!address) return;
+    if (needsApprove) return;
     try {
-      const hash = keccak256(
-        encodePacked(
-          ['uint256', 'string'],
-          [parseUnits(commitPrice, TOKEN_DECIMALS), commitSecret],
-        ),
-      );
+      const hash = generateCommitHash(parseUnits(commitPrice, TOKEN_DECIMALS), commitSecret);
+      setCommitData({ price: commitPrice, secret: commitSecret });
       commitHook.commitBid(bigId, hash);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al calcular el commitment');
     }
+  };
+
+  const handleApprove = () => {
+    setError(null);
+    if (!address || stake === 0n) return;
+    approveHook.approve(vaultAddress, stake);
   };
 
   const handleReveal = async (e: React.FormEvent) => {
@@ -123,6 +144,40 @@ export default function AuctionDetailPage() {
       setError(err instanceof Error ? err.message : 'Error al revelar la oferta');
     }
   };
+
+  // Respalda el secreto en localStorage cuando el commit se confirma on-chain.
+  // Patrón oficial React 19: detectar transición durante el render (no causa re-render extra).
+  const commitConfirmed = commitHook.isConfirmed;
+  const [prevCommitConfirmed, setPrevCommitConfirmed] = useState(false);
+  if (commitConfirmed && !prevCommitConfirmed) {
+    setPrevCommitConfirmed(true);
+    saveBidSecret(bigId, commitData);
+    setSuccess('Oferta comprometida. Guardamos tu secreto en este navegador para el reveal.');
+  } else if (!commitConfirmed && prevCommitConfirmed) {
+    setPrevCommitConfirmed(false);
+  }
+
+  // Autocompleta reveal (manual + delegado) desde localStorage al cargar o cambiar de auctionId.
+  // Patrón oficial React 19: "Adjusting state during render" (no causa re-render extra).
+  const [prevAutofillAuctionId, setPrevAutofillAuctionId] = useState<bigint | null>(null);
+  if (prevAutofillAuctionId !== bigId) {
+    setPrevAutofillAuctionId(bigId);
+    const stored = getBidSecret(bigId);
+    if (stored) {
+      setRevealPrice(stored.price);
+      setRevealSecret(stored.secret);
+      setDelegatePrice(stored.price);
+      setDelegateSecret(stored.secret);
+    }
+  }
+
+  // Limpia el respaldo una vez revelado con éxito.
+  const revealConfirmed = revealHook.isConfirmed;
+  useEffect(() => {
+    if (revealConfirmed) {
+      clearBidSecret(bigId);
+    }
+  }, [revealConfirmed, bigId]);
 
   const handleDelegate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -327,9 +382,21 @@ export default function AuctionDetailPage() {
                       onChange={(e) => setCommitSecret(e.target.value)}
                       required
                     />
-                    <Button type="submit" loading={commitHook.isPending || commitHook.isConfirming} className="w-full">
-                      Comprometer oferta
-                    </Button>
+                    {needsApprove ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        loading={approveBusy}
+                        onClick={handleApprove}
+                        className="w-full"
+                      >
+                        Aprobar USDC
+                      </Button>
+                    ) : (
+                      <Button type="submit" loading={commitHook.isPending || commitHook.isConfirming} className="w-full">
+                        Enviar Puja Ciega
+                      </Button>
+                    )}
                   </form>
                 )}
 

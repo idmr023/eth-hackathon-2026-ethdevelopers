@@ -15,6 +15,18 @@ export const PHASE_LABELS: Record<LicitacionPhase, string> = {
   CLOSED: "Cerrada",
 };
 
+export interface AiEvaluation {
+  score: number;
+  criteria: {
+    technicalQuality: number;
+    compliance: number;
+    delivery: number;
+    costJustification: number;
+  };
+  summary: string;
+  model: string;
+}
+
 export interface LicitacionProveedor {
   id: string;
   name: string;
@@ -23,6 +35,13 @@ export interface LicitacionProveedor {
   amount: number | null;
   qualityScore: number | null;
   userId?: string | null;
+  proposalFileName?: string | null;
+  proposalSize?: number | null;
+  aiScore?: number | null;
+  aiEvaluation?: AiEvaluation | null;
+  priceScore?: number | null;
+  finalScore?: number | null;
+  winnerReason?: string | null;
 }
 
 export interface Licitacion {
@@ -46,6 +65,9 @@ export interface PodiumEntry {
   amount: number;
   savings: number;
   commitmentHash: string;
+  aiScore?: number | null;
+  finalScore?: number | null;
+  winnerReason?: string | null;
 }
 
 export interface Credential {
@@ -55,15 +77,6 @@ export interface Credential {
   issuer: string;
   attestedAt: string;
   badge: "gold" | "green" | "navy";
-}
-
-export interface RwaAsset {
-  id: string;
-  contractName: string;
-  contractAddress: string;
-  tokenId: string;
-  amount: number;
-  buyer: string;
 }
 
 export const PHASE_TONES: Record<
