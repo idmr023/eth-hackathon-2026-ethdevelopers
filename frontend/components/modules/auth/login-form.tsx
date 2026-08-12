@@ -146,15 +146,6 @@ export function LoginForm() {
               Regístrate
             </Link>
           </p>
-          <div className="rounded-lg border border-border bg-mist p-3 text-xs space-y-1">
-            <p className="font-semibold text-muted">Credenciales de prueba:</p>
-            <p className="text-ink/80">
-              <span className="font-medium">Email:</span> admin@invoiceshield.dev
-            </p>
-            <p className="text-ink/80">
-              <span className="font-medium">Contraseña:</span> ChangeMe123!
-            </p>
-          </div>
         </>
       ) : (
         <>
