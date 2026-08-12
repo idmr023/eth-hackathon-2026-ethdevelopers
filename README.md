@@ -1,12 +1,11 @@
-# InvoiceShield 🛡️
+# LicitaBien (InvoiceShield) 🛡️
 
-**Protocolo descentralizado de coordinación financiera y prevención de fraude en factoring B2B para MYPES del Perú** — construido sobre **Arbitrum Sepolia** (RWA + DeFi + IA). Proyecto desarrollado para la **Hackathon ETH Lima 2026**.
+**Plataforma descentralizada de licitaciones públicas y factoring B2B blindada con IA y pruebas de conocimiento cero on-chain** — construida sobre **Arbitrum Sepolia** (RWA + DeFi + IA). Proyecto desarrollado para la **Hackathon ETH Lima 2026**.
 
-El sistema mitiga las dos fricciones financieras más críticas en el factoring nacional:
-1. **Fraude por doble financiación** — evita que una misma factura XML sea financiada en múltiples entidades simultáneamente mediante un registro inmutable on-chain (`keccak256`).
-2. **Riesgo de oráculo y facturas fantasma** — protege el desembolso de fondos exigiendo la validación a través de adaptadores simulados de **SUNAT** y **CAVALI** (diseñados con interfaces listas para oráculos y APIs reales).
-
-Además, incluye el contrato inteligente `BlindBidVault` para subastas de oferta sellada (*commit–reveal*) de deuda activa tokenizada.
+LicitaBien moderniza y asegura los procesos de licitación y adjudicación de contratos/facturas para MYPES y entidades públicas:
+1. **Licitaciones transparentes con Commit–Reveal** — evita filtraciones de ofertas y colusiones mediante ofertas selladas on-chain gestionadas a través del contrato `BlindBidVault`.
+2. **Evaluación inteligente con IA (OpenRouter / Llama 3.1 Nemotron)** — análisis automatizado de propuestas y cálculo de puntuaciones de calidad (`aiScore`).
+3. **Credenciales Verificables con EAS** — emisión de atestaciones on-chain de reputación y adjudicación mediante Ethereum Attestation Service.
 
 ---
 
@@ -15,7 +14,7 @@ Además, incluye el contrato inteligente `BlindBidVault` para subastas de oferta
 ```
 ethackhaton-frontend&backend/
 ├── backend/            → API NestJS + Prisma + Neon PostgreSQL (Arbitrum Sepolia)
-├── frontend/           → dApp Next.js (App Router) + Tailwind v4 + Wagmi/RainbowKit
+├── frontend/           → dApp Next.js (App Router) + Tailwind v4 + Wagmi/RainbowKit (Módulo LicitaBien)
 ├── contracts/          → Contratos inteligentes Solidity (Foundry) & BlindBidVault
 ├── docs/               → Arquitectura, changelog y documentación técnica
 └── .github/            → CI/CD Workflows (lint, typecheck, tests)
@@ -34,7 +33,7 @@ npm install
 cp .env.example .env        # Configurar DATABASE_URL y secretos JWT
 npx prisma generate
 npx prisma migrate dev      # Aplicar migraciones de base de datos
-npm run db:seed             # Cargar usuarios, roles y facturas de prueba
+npm run db:seed             # Cargar usuarios, roles y datos demo de LicitaBien
 npm run dev                 # Inicia en http://localhost:4000
 ```
 
@@ -60,7 +59,8 @@ npm run dev                 # Inicia en http://localhost:3000
 
 - **WORM Audit Logs:** Historial inmutable con políticas estrictas de base de datos.
 - **Autoridad de Negocio Backend:** Lógica y validación robustas centralizadas en NestJS.
-- **Seguridad Criptográfica:** Cálculo de hashes del lado del servidor basados en XML originales de SUNAT.
+- **Seguridad Criptográfica:** Commit–Reveal on-chain y cálculo de hashes del lado del servidor.
+
 
 
 ---

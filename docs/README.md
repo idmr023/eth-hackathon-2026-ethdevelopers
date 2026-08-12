@@ -1,4 +1,4 @@
-# Documentación — InvoiceShield
+# Documentación — LicitaBien (InvoiceShield)
 
 Índice de documentación del proyecto (hackathon ETH Lima 2026).
 

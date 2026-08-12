@@ -1,5 +1,5 @@
-# 🛡️ InvoiceShield — AGENTS.md
-### El "Brain-Context" para Agentes de IA en el Repositorio de InvoiceShield
+# 🛡️ LicitaBien (InvoiceShield) — AGENTS.md
+### El "Brain-Context" para Agentes de IA en el Repositorio
 
 Este archivo sirve como la **especificación técnica unificada, mapa de arquitectura y manual de instrucciones** para cualquier Agente de IA que colabore en este codebase.
 
@@ -7,17 +7,18 @@ Este archivo sirve como la **especificación técnica unificada, mapa de arquite
 
 ## 🌌 Visión y Contexto del Negocio (RWA + DeFi + IA)
 
-**InvoiceShield** es un protocolo descentralizado de finanzas regenerativas (ReFi) y tokenización de activos del mundo real (RWA) sobre **Arbitrum Sepolia**, diseñado para mitigar las fricciones de factoring para las MYPES del Perú:
-1.  **Fraude por Doble Financiación:** Evita que una misma factura XML sea financiada en múltiples entidades mediante huellas inmutables on-chain (`keccak256`).
-2.  **Riesgo de Oráculo y Facturas Fantasma:** Blindaje mediante firmas multisello y adaptadores simulados (SUNAT & CAVALI) conectados a bases de datos de confianza y estructurados para integración futura con oráculos reales.
+**LicitaBien** es una plataforma descentralizada de licitaciones públicas y adjudicación de contratos para MYPES y entidades peruanas sobre **Arbitrum Sepolia**, diseñada para blindar los procesos de licitación y factoring:
+1.  **Licitaciones Commit–Reveal:** Ofertas selladas on-chain vía `BlindBidVault` que impiden filtraciones, colusión y manipulación de la adjudicación.
+2.  **Evaluación por IA:** Análisis automatizado de propuestas con OpenRouter / Llama 3.1 Nemotron que produce un `aiScore` de calidad (0–100).
+3.  **Credenciales EAS:** Atestaciones on-chain de reputación y adjudicación mediante Ethereum Attestation Service.
 
 ### Flujo de Coordinación Financiera
-1. **Ingesta de Facturas:** Subida de factura XML original.
-2. **Cálculo de Hash:** Generación de clave criptográfica primaria en el backend.
-3. **Auditoría de Riesgo por IA:** Análisis con OpenRouter / Llama 3.1 Nemotron.
-4. **Escrow Condicionado:** Retención de USDC en pool de liquidez (*Lending Vault*).
-5. **Liberación por Adaptadores:** Desembolso condicionado a validaciones legales (SUNAT/CAVALI).
-6. **Recuperación Jurídica:** Emisión de NFT de Deuda Activa en caso de impago y subasta vía `BlindBidVault`.
+1. **Creación de Licitación:** La entidad define presupuesto, alcance y plazos; el backend crea la subasta on-chain.
+2. **Commit–Reveal:** El proveedor compromete una oferta sellada `keccak256(price, secret)` y la revela al cierre de la ventana.
+3. **Auditoría de Riesgo por IA:** Análisis de la propuesta con OpenRouter / Llama 3.1 Nemotron.
+4. **Scoring Compuesto:** `priceWeight` + `qualityWeight` combinan precio con `aiScore` en el contrato.
+5. **Settlement:** `settleAuction` adjudica al mejor score, devuelve o aplica *slash* a los stakes.
+6. **Credenciales:** Emisión de atestación EAS de adjudicación y reputación del ganador.
 
 ---
 
@@ -57,8 +58,9 @@ forge test
 3. **Autoridad en Backend:** El frontend actúa puramente como capa de presentación.
 4. **Calidad CI:** Cero tolerancia a errores de linter, typecheck o tests fallidos.
 5. **Formato JSON Estándar:** `{ ok: boolean, data: any, total?: number }`.
-6. **Cálculo de Hash en Servidor:** Nunca confiar en hashes enviados por el cliente.
-7. **Aislamiento de Oráculos:** Abstracción mediante interfaces de adaptadores.
+6. **Commit–Reveal en Servidor:** Nunca confiar en commits hasheados enviados por el cliente; el backend recalcula y valida on-chain.
+7. **IA Resiliente:** `AiEvaluationService` debe caer a heurística determinista si OpenRouter falla o falta la clave.
+
 
 
 ---
@@ -95,7 +97,7 @@ Repository / Prisma (Acceso limpio a la base de datos sin lógica de negocio)
 
 ## Filosofía del Proyecto
 
-InvoiceShield es un MVP para una hackathon.
+LicitaBien es un MVP para una hackathon.
 
 Siempre priorizar:
 
@@ -194,26 +196,29 @@ Fase 1
 - [x] Scaffold-ETH
 
 Fase 2
-- [ ] Contratos
-- [ ] Tests
+- [x] Contratos BlindBidVault + EAS Schemas
+- [x] Tests
 
 Fase 3
-- [ ] Backend
+- [x] Backend
 
 Fase 4
-- [ ] Frontend
+- [x] Frontend
 
 Fase 5
-- [ ] Demo
+- [x] Demo / Documentación
+
+Fase 6
+- [ ] Despliegue (Vercel + Render)
 
 
 ## 🤖 Directrices de Comportamiento para Agentes de IA
 
 Cuando trabajes en este codebase utilizando tu entorno MCP o herramientas de análisis de código, asegúrate de:
 
-*   **Consultar el Codebase-Memory local:** Utiliza el grafo de conocimiento local generado por `codebase-memory-mcp` para resolver qué funciones llaman a un servicio o cómo interactúa el contrato inteligente de factoring con el pool antes de escribir código redundante.
+*   **Consultar el Codebase-Memory local:** Utiliza el grafo de conocimiento local generado por `codebase-memory-mcp` para resolver qué funciones llaman a un servicio o cómo interactúa el contrato `BlindBidVault` con el scoring de IA antes de escribir código redundante.
 *   **Consumir Context7 para Librerías Web3:** Siempre que vayas a integrar Hooks de Wagmi, interactuar con el ABI en Next.js o configurar llamadas de Ethers.js, solicita la documentación en tiempo real mediante `Context7` utilizando la instrucción `use context7` para evitar APIs obsoletas de versiones previas.
-*   **Testeo de Invariantes (Fuzz Testing):** Al generar o modificar las pruebas unitarias y de integración del backend, diseña casos límite y pruebas aleatorias (emulando las pruebas de estrés *fuzzing* de Forge en Foundry) para asegurar que el cálculo de tasas y distribución de USDC nunca comprometa la inmutabilidad de la tesorería.
+*   **Testeo de Invariantes (Fuzz Testing):** Al generar o modificar las pruebas unitarias y de integración del backend, diseña casos límite y pruebas aleatorias (emulando las pruebas de estrés *fuzzing* de Forge en Foundry) para asegurar que el cálculo de scoring compuesto (precio + `aiScore`) y la distribución de USDC nunca comprometan la inmutabilidad de la tesorería.
 
 ---
-*Documento de trabajo para el equipo de desarrollo de InvoiceShield — Hackathon ETH Lima 2026.* [77]
+*Documento de trabajo para el equipo de desarrollo de LicitaBien — Hackathon ETH Lima 2026.*
