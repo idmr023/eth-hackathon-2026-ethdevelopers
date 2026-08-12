@@ -1,4 +1,4 @@
-# Arquitectura técnica — LicitaBien (InvoiceShield)
+# Arquitectura técnica — LicitaBien
 
 ## 1. Visión general
 
