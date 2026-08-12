@@ -1,89 +1,65 @@
 # 🛡️ InvoiceShield — AGENTS.md
 ### El "Brain-Context" para Agentes de IA en el Repositorio de InvoiceShield
 
-Este archivo sirve como la **especificación técnica unificada, mapa de arquitectura y manual de instrucciones** para cualquier Agente de IA (Cursor, Claude Code, etc.) que colabore en este codebase. Al leer este archivo, el agente comprenderá el modelo de negocio, las restricciones criptográficas, la teoría de juegos del protocolo y las convenciones exactas del desarrollo.
+Este archivo sirve como la **especificación técnica unificada, mapa de arquitectura y manual de instrucciones** para cualquier Agente de IA que colabore en este codebase.
 
 ---
 
 ## 🌌 Visión y Contexto del Negocio (RWA + DeFi + IA)
 
-**InvoiceShield** es un protocolo descentralizado de finanzas regenerativas (ReFi) y tokenización de activos del mundo real (RWA) sobre **Arbitrum**, diseñado específicamente para mitigar las dos fricciones financieras más críticas en el factoring de las Micro y Pequeñas Empresas (MYPES) en el Perú [12, 13, 203]:
-1.  **El Fraude por Doble Financiación:** Evitar que una misma factura XML sea registrada y financiada en múltiples entidades tradicionales en tiempo real mediante un registro inmutable on-chain [8].
-2.  **El Riesgo de Oráculo y Fraude de Facturas Fantasma:** Mitigar el riesgo comercial blindando el flujo mediante firmas multisello de enemigos y simulando adaptadores oráculo off-chain vinculados a bases de datos de confianza [3, 9, 41, 42].
+**InvoiceShield** es un protocolo descentralizado de finanzas regenerativas (ReFi) y tokenización de activos del mundo real (RWA) sobre **Arbitrum Sepolia**, diseñado para mitigar las fricciones de factoring para las MYPES del Perú:
+1.  **Fraude por Doble Financiación:** Evita que una misma factura XML sea financiada en múltiples entidades mediante huellas inmutables on-chain (`keccak256`).
+2.  **Riesgo de Oráculo y Facturas Fantasma:** Blindaje mediante firmas multisello y adaptadores simulados (SUNAT & CAVALI) conectados a bases de datos de confianza y estructurados para integración futura con oráculos reales.
 
-### El Flujo de Coordinación Financiera (On-Chain / Off-Chain)
-
-1.  **La Ingesta de Facturas (XML de SUNAT):** La MYPE sube la factura electrónica en formato XML original [8]. El frontend no calcula la huella final para decisiones críticas; la envía de manera segura al backend (NestJS) [Reglas globales].
-2.  **Cálculo de la Huella Criptográfica:** El backend procesa el XML, valida la autenticidad y calcula un hash `Keccak256(ruc_emisor + ruc_receptor + numero_factura + monto)` [8, 96]. Este hash actúa como la clave primaria del activo en la blockchain.
-3.  **Auditoría de Riesgo por IA (OpenRouter + Nemotron):** El backend envía el contenido XML a la API de **OpenRouter** consumiendo el modelo gratuito `llama-3.1-nemotron-70b-instruct:free` para buscar anomalías de negocio (incoherencias de montos, fechas de vencimiento ilógicas) [708].
-4.  **Escrow Condicionado de Fondos (DeFi Liquidity Pools):** Los inversionistas globales aportan USDC a un pool de liquidez (*Lending Vault*) [22, 23, 203]. Al aprobarse el análisis crediticio por IA, los fondos requeridos quedan retenidos en un contrato de *Escrow* (fideicomiso) [9, 22].
-5.  **Liberación por Adaptadores (SUNAT & CAVALI):** El *Escrow* on-chain mantiene el dinero en custodia inmutable y **solo libera el capital** al proveedor cuando los adaptadores simulan recibir luz verde de los sistemas legales peruanos [9, 22, 23]:
-    *   **Conformidad SUNAT:** Validación de conformidad de 8 días de la factura sin notas de crédito posteriores [22].
-    *   **Anotación CAVALI:** Verificación en Factrack de que la factura ya es un título valor legalmente transmisible [7, 22].
-6.  **Recuperación Jurídica en Incumplimiento (NFT de Deuda Activa):** Si el deudor entra en impago (*Default*) al vencimiento del plazo, el Smart Contract emite un **NFT de Deuda Activa** [23, 203]. Este NFT representa el derecho legal de cobro originado off-chain y puede ser subastado con descuento a empresas de cobranza tradicionales de forma transparente [22, 23].
+### Flujo de Coordinación Financiera
+1. **Ingesta de Facturas:** Subida de factura XML original.
+2. **Cálculo de Hash:** Generación de clave criptográfica primaria en el backend.
+3. **Auditoría de Riesgo por IA:** Análisis con OpenRouter / Llama 3.1 Nemotron.
+4. **Escrow Condicionado:** Retención de USDC en pool de liquidez (*Lending Vault*).
+5. **Liberación por Adaptadores:** Desembolso condicionado a validaciones legales (SUNAT/CAVALI).
+6. **Recuperación Jurídica:** Emisión de NFT de Deuda Activa en caso de impago y subasta vía `BlindBidVault`.
 
 ---
 
-## 🛠️ Comandos de Ejecución Rápida
+## 🛠️ Comandos de Ejecución
 
-Para iniciar el desarrollo, testear e integrar de forma local, utiliza los siguientes comandos estándar. **Los agentes de IA deben respetar estrictamente este esquema de ejecución en monorrepo:**
-
-### 🖥️ Backend (NestJS + Prisma + Neon PostgreSQL)
+### 🖥️ Backend (NestJS)
 ```bash
-# Cambiar al directorio del backend
 cd backend
-
-# Levantar entorno de desarrollo con recarga en vivo
 npm run dev
-
-# Ejecutar las pruebas unitarias y de integración
 npm run test
-
-# Correr el linter estricto de TypeScript (ESLint 9)
 npm run lint
-
-# Validar tipado sin compilar (Tolerancia cero a errores)
 npm run typecheck
-
-# Generar y aplicar migraciones de base de datos
 npx prisma migrate dev
-
-# Poblado de base de datos con mock data para testing
-npx prisma db seed
 ```
 
-### 🎨 Frontend (Next.js App Router + TailwindCSS + Wagmi/RainbowKit)
+### 🎨 Frontend (Next.js)
 ```bash
-# Cambiar al directorio del frontend
 cd frontend
-
-# Levantar el servidor de desarrollo local
 npm run dev
-
-# Ejecutar pruebas unitarias de componentes
 npm run test
-
-# Verificar cumplimiento de reglas estéticas y de sintaxis
 npm run lint
-
-# Validar tipado de Next.js
 npm run typecheck
+```
+
+### ⬢ Smart Contracts (Foundry)
+```bash
+cd contracts
+forge test
 ```
 
 ---
 
 ## 📋 Reglas Globales de Desarrollo y Seguridad
 
-Cualquier agente de IA que genere o refactorice código en este repositorio debe respetar **8 mandamientos inquebrantables**:
+1. **Cero Hardcoding de Secretos:** Uso estricto de `.env.example`.
+2. **Inmutabilidad WORM:** `audit_logs` con restricciones contra modificaciones directas.
+3. **Autoridad en Backend:** El frontend actúa puramente como capa de presentación.
+4. **Calidad CI:** Cero tolerancia a errores de linter, typecheck o tests fallidos.
+5. **Formato JSON Estándar:** `{ ok: boolean, data: any, total?: number }`.
+6. **Cálculo de Hash en Servidor:** Nunca confiar en hashes enviados por el cliente.
+7. **Aislamiento de Oráculos:** Abstracción mediante interfaces de adaptadores.
 
-1.  **Cero Hardcoding de Secretos:** Jamás versionar archivos `.env`, `.env.local` ni claves de API en GitHub. Solo se permite versionar esquemas de variables en `.env.example`.
-2.  **Inmutabilidad de Auditoría (WORM):** El log de transacciones y auditoría física `audit_logs` utiliza el patrón *Write Once, Read Many* (WORM). Los triggers y las restricciones de la base de datos bloquean cualquier sentencia directa de `UPDATE` o `DELETE`.
-3.  **Autoridad Central en Backend:** El frontend es solo un visualizador dinámico con filtros de interfaz de usuario [Reglas globales]. La lógica de validación de negocio, cálculo de tasas, verificación de roles y autorización reside de forma estricta y exclusiva en el backend de NestJS.
-4.  **Calidad en Integración Continua (CI):** No se aprueba ningún pull request si existen alertas de ESLint, errores en `typecheck` o pruebas que fallen en la terminal. **La deuda técnica tiene un costo inaceptable.**
-5.  **Formato de Respuesta de API Estándar:** Todas las APIs deben retornar el formato JSON estricto: `{ ok: boolean, data: any, total?: number }`. Los errores deben utilizar los códigos de catálogo preestablecidos para mapear el origen exacto del fallo.
-6.  **Documentación Continua en Changelog:** Toda funcionalidad integrada bajo una fase debe ser documentada de inmediato en `/docs/CHANGELOG.md` referenciando el identificador descriptivo correspondiente (e.g. `[fase.1.ingesta]`).
-7.  **Cálculo de Hash del Lado del Servidor:** Jamás se debe confiar en el hash Keccak256 enviado por el cliente para almacenar el activo en Arbitrum Sepolia [Reglas globales]. El backend debe recalcularlo y verificarlo contra el XML original de SUNAT.
-8.  **Aislamiento de Interfaces de Oráculo:** Los adaptadores que simulan SUNAT y CAVALI deben estar encapsulados bajo una abstracción clara de interfaces (`AdapterService`) de NestJS [Reglas globales]. Esto permite que el sistema simule las aprobaciones lógicas con mockups hoy, pero sea 100% reemplazable por integraciones API reales u oráculos (Chainlink/API3) mañana [88, 296].
 
 ---
 

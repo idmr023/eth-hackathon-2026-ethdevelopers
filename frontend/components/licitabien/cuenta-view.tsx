@@ -14,6 +14,7 @@ import {
 } from "@/lib/auth";
 import { usersApi } from "@/lib/endpoints";
 import { ChangePasswordForm } from "@/components/modules/auth/change-password-form";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 type Setup = { secret: string; otpauthUri: string } | null;
 
@@ -169,6 +170,21 @@ useEffect(() => {
         </dl>
         <InlineError message={error} />
         <InlineSuccess message={success} />
+      </section>
+
+      {/* ── Conexión de Billetera ── */}
+      <section className="rounded-xl border border-border bg-surface p-5 shadow-[var(--shadow-card)] flex items-center justify-between">
+        <div>
+          <h2 className="font-display text-base font-bold text-ink">
+            Billetera Web3 (Arbitrum Sepolia)
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            Conecta tu wallet para firmar transacciones, participar en subastas y reclamar RWA.
+          </p>
+        </div>
+        <div>
+          <ConnectButton showBalance={false} />
+        </div>
       </section>
 
       {/* ── Cambio de contraseña ── */}

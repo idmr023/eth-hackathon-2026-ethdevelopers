@@ -1,100 +1,67 @@
-# InvoiceShield
+# InvoiceShield 🛡️
 
-**Protocolo descentralizado de coordinación financiera y prevención de fraude en factoring B2B para MYPES del Perú** — construido sobre **Arbitrum Sepolia** (RWA + DeFi + IA). Proyecto para la **Hackathon ETH Lima 2026**.
+**Protocolo descentralizado de coordinación financiera y prevención de fraude en factoring B2B para MYPES del Perú** — construido sobre **Arbitrum Sepolia** (RWA + DeFi + IA). Proyecto desarrollado para la **Hackathon ETH Lima 2026**.
 
-El sistema ataca dos fricciones críticas del factoring peruano:
+El sistema mitiga las dos fricciones financieras más críticas en el factoring nacional:
+1. **Fraude por doble financiación** — evita que una misma factura XML sea financiada en múltiples entidades simultáneamente mediante un registro inmutable on-chain (`keccak256`).
+2. **Riesgo de oráculo y facturas fantasma** — protege el desembolso de fondos exigiendo la validación a través de adaptadores simulados de **SUNAT** y **CAVALI** (diseñados con interfaces listas para oráculos y APIs reales).
 
-1. **Fraude por doble financiación** — que una misma factura XML sea financiada en múltiples entidades. Se previene registrando una huella `keccak256` inmutable on-chain del activo.
-2. **Riesgo de oráculo y facturas fantasma** — el desembolso solo se libera cuando adaptadores simulados de **SUNAT** y **CAVALI** (encapsulados tras una interfaz reemplazable por oráculos reales) dan luz verde.
-
-Además incluye un módulo de **licitaciones BlindBid** (subastas de oferta sellada commit–reveal) para adjudicar la venta de deuda activa de forma transparente.
+Además, incluye el contrato inteligente `BlindBidVault` para subastas de oferta sellada (*commit–reveal*) de deuda activa tokenizada.
 
 ---
 
-## 🏗️ Arquitectura
-
-Monorepo con dos aplicaciones independientes:
+## 🏗️ Estructura del Monorepo
 
 ```
 ethackhaton-frontend&backend/
-├── backend/    → API NestJS 11 + Prisma 6 + Neon PostgreSQL (Arbitrum Sepolia)
-├── frontend/   → dApp Next.js 16 (App Router) + Tailwind v4 + wagmi/RainbowKit
-├── docs/       → CHANGELOG, arquitectura, hoja de ruta
-└── .github/    → CI (lint, typecheck, tests, build)
+├── backend/            → API NestJS + Prisma + Neon PostgreSQL (Arbitrum Sepolia)
+├── frontend/           → dApp Next.js (App Router) + Tailwind v4 + Wagmi/RainbowKit
+├── contracts/          → Contratos inteligentes Solidity (Foundry) & BlindBidVault
+├── docs/               → Arquitectura, changelog y documentación técnica
+└── .github/            → CI/CD Workflows (lint, typecheck, tests)
 ```
-
-**Flujo de coordinación financiera (on-chain / off-chain):**
-
-1. La MYPE sube la factura electrónica (XML de SUNAT).
-2. El **backend** valida el XML, calcula la huella `keccak256(ruc_emisor + ruc_receptor + numero + monto)` y la registra on-chain → **inmutabilidad anti doble financiamiento**.
-3. Un análisis de riesgo por **IA** (OpenRouter/Nemotron) detecta anomalías de negocio.
-4. Un *Escrow* on-chain retiene los fondos en **USDC**.
-5. Los **adaptadores SUNAT/CAVALI** (simulados) liberan el capital solo tras validar conformidad SUNAT y anotación en CAVALI/Factrack.
-6. En impago, el contrato emite un **NFT de Deuda Activa** que puede subastarse vía el módulo **BlindBid**.
-
-> ⚙️ El contrato inteligente `BlindBidVault` está desplegado en Arbitrum Sepolia; en este repo se integra vía ABI (`frontend/lib/web3/contracts/BlindBidVault.ts`) y a través de `backend/src/modules/bidding`.
 
 ---
 
-## 🚀 Puesta en marcha (local)
+## 🚀 Puesta en Marcha Rápida
 
-Prerrequisitos: **Node.js 22+**, **npm**, acceso a una base **Neon PostgreSQL**.
+Requisitos previos: **Node.js 22+**, **npm**, acceso a **Neon PostgreSQL** (o PostgreSQL local).
 
-### Backend
-
+### 1. Backend (NestJS)
 ```bash
 cd backend
 npm install
-cp .env.example .env        # completa DATABASE_URL, JWT_*_SECRET, etc.
+cp .env.example .env        # Configurar DATABASE_URL y secretos JWT
 npx prisma generate
-npx prisma migrate deploy   # aplica migraciones (o npx prisma migrate dev)
-npm run db:seed             # datos demo (admin, factores, facturas)
-npm run start:dev           # http://localhost:4000
+npx prisma migrate dev      # Aplicar migraciones de base de datos
+npm run db:seed             # Cargar usuarios, roles y facturas de prueba
+npm run dev                 # Inicia en http://localhost:4000
 ```
 
-### Frontend
-
+### 2. Frontend (Next.js)
 ```bash
 cd frontend
 npm install
-cp .env.example .env.local  # NEXT_PUBLIC_API_URL=http://localhost:4000
-npm run dev                 # http://localhost:3000
-```
-
-Accesos demo (seed): admin `admin@invoiceshield.dev` / `ChangeMe123!` · analistas `analista@continental.pe` y `analista@peru.pe`.
-
-### Comandos útiles (raíz)
-
-```bash
-npm run dev:backend    # backend con recarga en vivo
-npm run dev:frontend   # frontend Next.js
+cp .env.example .env.local  # Configurar NEXT_PUBLIC_API_URL=http://localhost:4000
+npm run dev                 # Inicia en http://localhost:3000
 ```
 
 ---
 
-## 🧪 Calidad (gate obligatorio por fase)
+## 🧪 Pruebas y Calidad
 
-| Comando (backend) | Comando (frontend) | Descripción |
-|---|---|---|
-| `npm run lint` | `npm run lint` | ESLint estricto, cero alertas |
-| `npm run typecheck` | `npm run typecheck` | `tsc --noEmit`, tolerancia cero |
-| `npm test` | `npm test` | Tests unitarios (vitest en front) |
-| `npm run test:e2e` | — | Tests e2e (jest) |
-| `npm run build` | `npm run build` | Compilación de producción |
-
-Estado: **back 39 unit + 4 e2e · front 21 unit** — gate en verde en CI.
+- **Backend:** `npm test`, `npm run lint`, `npm run typecheck`
+- **Frontend:** `npm test`, `npm run lint`, `npm run typecheck`
+- **Contratos (Foundry):** `forge test` (dentro de `contracts/`)
 
 ---
 
-## 🔐 Seguridad y reglas de diseño
+## 🔐 Seguridad y Estándares
 
-- **Cero hardcoding de secretos** — solo `.env.example` versionado.
-- **Auditoría WORM** — `audit_logs` append-only por triggers y `REVOKE` (Write Once, Read Many).
-- **Autoridad central en backend** — el frontend es solo visualizador; validación, roles y tasas viven en NestJS.
-- **Hash del lado del servidor** — nunca se confía en hashes enviados por el cliente.
-- **Aislamiento de oráculos** — adaptadores SUNAT/CAVALI tras la interfaz `AdapterService`.
-- **Sesión con cookies httpOnly** — `is_session` (15m) + `is_refresh` (7d, rotatorio single-use), lockout tras 5 intentos.
-- **Rate limiting** por endpoint (login 20/15min, refresh 60/15min, global 300/min) y RBAC con 7 permisos.
+- **WORM Audit Logs:** Historial inmutable con políticas estrictas de base de datos.
+- **Autoridad de Negocio Backend:** Lógica y validación robustas centralizadas en NestJS.
+- **Seguridad Criptográfica:** Cálculo de hashes del lado del servidor basados en XML originales de SUNAT.
+
 
 ---
 
