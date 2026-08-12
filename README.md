@@ -1,4 +1,4 @@
-# LicitaBien (InvoiceShield) 🛡️
+# LicitaBien
 
 **Plataforma descentralizada de licitaciones públicas y factoring B2B blindada con IA y pruebas de conocimiento cero on-chain** — construida sobre **Arbitrum Sepolia** (RWA + DeFi + IA). Proyecto desarrollado para la **Hackathon ETH Lima 2026**.
 
