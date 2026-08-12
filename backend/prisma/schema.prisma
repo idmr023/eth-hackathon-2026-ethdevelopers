@@ -338,3 +338,19 @@ model Licitacion {
   @@index([organizerId])
   @@map("licitacion")
 }
+
+// Propuestas PDF de las licitaciones almacenadas en binario (BYTEA) dentro de
+// la propia base de datos Neon. Evita depender de S3/MinIO y sobrevive a los
+// reinicios efímeros de Render. Una fila por (licitacionId, providerId).
+model ProposalDocument {
+  id           String   @id @default(cuid())
+  licitacionId String   @map("licitacion_id")
+  providerId   String   @map("provider_id") @db.VarChar(50)
+  fileName     String?  @map("file_name") @db.VarChar(255)
+  contentType  String?  @map("content_type") @db.VarChar(100)
+  data         Bytes    @map("data")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@unique([licitacionId, providerId], name: "proposal_document_licitacion_id_provider_id_key")
+  @@map("proposal_document")
+}

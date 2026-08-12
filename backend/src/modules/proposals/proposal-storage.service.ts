@@ -1,10 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import {
-  GetObjectCommand,
-  PutObjectCommand,
-  S3Client,
-} from '@aws-sdk/client-s3';
+import { PrismaService } from '../../shared/prisma.service';
 
 export interface StoredProposal {
   buffer: Buffer;
@@ -12,43 +7,20 @@ export interface StoredProposal {
   fileName: string;
 }
 
-// Abstracción de almacenamiento de propuestas PDF (S3/MinIO compatibles).
-// Se desactiva si faltan las variables AWS_*; los métodos devuelven null o
-// lanzan según el caso para que el dominio decida el comportamiento.
+// Almacenamiento de propuestas PDF en binario (BYTEA) dentro de la propia
+// base de datos Neon (tabla proposal_document). No depende de S3/MinIO ni de
+// disco local: sobrevive a los reinicios efímeros de Render y no requiere
+// variables de infraestructura extra.
 @Injectable()
 export class ProposalStorageService {
   private readonly logger = new Logger(ProposalStorageService.name);
-  private readonly client: S3Client | null;
-  private readonly bucket: string;
 
-  constructor(config: ConfigService) {
-    const endpoint = config.get<string>('AWS_ENDPOINT_URL_S3');
-    const region = config.get<string>('AWS_REGION', 'us-east-2');
-    const accessKeyId = config.get<string>('AWS_ACCESS_KEY_ID');
-    const secretAccessKey = config.get<string>('AWS_SECRET_ACCESS_KEY');
-    const bucket = config.get<string>('AWS_BUCKET');
-
-    if (endpoint && accessKeyId && secretAccessKey && bucket) {
-      this.client = new S3Client({
-        region,
-        endpoint,
-        credentials: { accessKeyId, secretAccessKey },
-        forcePathStyle: true,
-        requestChecksumCalculation: 'WHEN_REQUIRED',
-      });
-      this.bucket = bucket;
-      this.logger.log('Almacenamiento de propuestas conectado (S3/MinIO)');
-    } else {
-      this.client = null;
-      this.bucket = '';
-      this.logger.warn(
-        'Almacenamiento de propuestas desactivado: faltan variables AWS_*',
-      );
-    }
+  constructor(private readonly prisma: PrismaService) {
+    this.logger.log('Almacenamiento de propuestas en base de datos (BYTEA)');
   }
 
   get enabled(): boolean {
-    return this.client !== null;
+    return true;
   }
 
   key(licitacionId: string, providerId: string): string {
@@ -61,39 +33,47 @@ export class ProposalStorageService {
     buffer: Buffer,
     contentType: string,
   ): Promise<string> {
-    if (!this.client) {
-      throw new Error('Almacenamiento de propuestas no configurado');
-    }
-    const key = this.key(licitacionId, providerId);
-    await this.client.send(
-      new PutObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-        Body: buffer,
-        ContentType: contentType || 'application/pdf',
-      }),
-    );
-    return key;
+    const data = new Uint8Array(buffer);
+    await this.prisma.proposalDocument.upsert({
+      where: {
+        proposal_document_licitacion_id_provider_id_key: {
+          licitacionId,
+          providerId,
+        },
+      },
+      create: {
+        licitacionId,
+        providerId,
+        fileName: `${providerId}.pdf`,
+        contentType: contentType || 'application/pdf',
+        data,
+      },
+      update: {
+        fileName: `${providerId}.pdf`,
+        contentType: contentType || 'application/pdf',
+        data,
+      },
+    });
+    return this.key(licitacionId, providerId);
   }
 
   async download(
     licitacionId: string,
     providerId: string,
   ): Promise<StoredProposal | null> {
-    if (!this.client) return null;
-    const res = await this.client.send(
-      new GetObjectCommand({
-        Bucket: this.bucket,
-        Key: this.key(licitacionId, providerId),
-      }),
-    );
-    const stream = res.Body as
-      { transformToByteArray: () => Promise<Uint8Array> } | undefined;
-    if (!stream) return null;
+    const doc = await this.prisma.proposalDocument.findUnique({
+      where: {
+        proposal_document_licitacion_id_provider_id_key: {
+          licitacionId,
+          providerId,
+        },
+      },
+    });
+    if (!doc) return null;
     return {
-      buffer: Buffer.from(await stream.transformToByteArray()),
-      contentType: res.ContentType ?? 'application/pdf',
-      fileName: `${providerId}.pdf`,
+      buffer: Buffer.from(doc.data),
+      contentType: doc.contentType ?? 'application/pdf',
+      fileName: doc.fileName ?? `${providerId}.pdf`,
     };
   }
 }
